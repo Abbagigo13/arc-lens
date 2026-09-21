@@ -32,11 +32,11 @@ export default function RecurringPanel() {
       return;
     }
     if (!onArc) {
-      setError("Switch to Arc Mainnet first.");
+      setError("Switch to Arc Network first.");
       return;
     }
     if (!/^0x[a-fA-F0-9]{40}$/.test(recipient.trim())) {
-      setError("Invalid recipient");
+      setError("Invalid recipient address format.");
       return;
     }
     setBusy(true);
@@ -109,42 +109,42 @@ export default function RecurringPanel() {
       animate={{ opacity: 1, y: 0 }}
       className="card-surface rounded-2xl p-6"
     >
-      <div className="mb-4 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent border border-accent/20">
           <Repeat className="h-4 w-4" />
         </span>
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Recurring buy</h2>
-          <p className="text-xs text-muted">Create · pull · cancel (mainnet)</p>
+          <h2 className="text-sm font-semibold text-foreground">Recurring Buy</h2>
+          <p className="text-xs text-slate-400">Scheduled USDC stream flows</p>
         </div>
       </div>
 
-      <form onSubmit={onCreate} className="space-y-3">
+      <form onSubmit={onCreate} className="space-y-3.5">
         <div>
-          <label className="mb-1 block text-xs text-muted">Recipient</label>
+          <label className="mb-1 block text-xs font-medium text-slate-300">Recipient</label>
           <input
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             placeholder="0x…"
-            className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-primary/50"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs text-muted">Amount / pull</label>
+            <label className="mb-1 block text-xs font-medium text-slate-300">Amount / pull</label>
             <input
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               inputMode="decimal"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">Interval (sec)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-300">Interval (sec)</label>
             <input
               value={intervalSec}
               onChange={(e) => setIntervalSec(e.target.value)}
-              className="w-full rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary/50"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               inputMode="numeric"
             />
           </div>
@@ -152,49 +152,46 @@ export default function RecurringPanel() {
         <button
           type="submit"
           disabled={busy}
-          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:opacity-40"
         >
-          {!isConnected ? "Connect wallet" : busy ? "Confirm…" : "Create plan"}
+          {!isConnected ? "Connect Wallet" : busy ? "Confirm in Wallet…" : "Create Plan"}
         </button>
       </form>
 
-      <div className="mt-4 border-t border-card-border pt-4">
-        <label className="mb-1 block text-xs text-muted">Plan ID (0, 1, 2…)</label>
+      <div className="mt-5 border-t border-slate-800 pt-4">
+        <label className="mb-1.5 block text-xs font-medium text-slate-300">Manage Plan ID (0, 1, 2…)</label>
         <input
           value={planId}
           onChange={(e) => setPlanId(e.target.value)}
-          className="mb-2 w-full rounded-xl border border-card-border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
+          className="mb-3 w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm font-mono text-foreground outline-none focus:border-accent"
         />
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={onPull}
             disabled={busy}
-            className="cursor-pointer rounded-xl border border-card-border px-3 py-2 text-xs font-medium text-foreground hover:border-accent/40 disabled:opacity-40"
+            className="cursor-pointer rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-foreground hover:border-accent/50 disabled:opacity-40"
           >
-            Pull now
+            Pull Due
           </button>
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="cursor-pointer rounded-xl border border-danger/40 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-40"
+            className="cursor-pointer rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/20 disabled:opacity-40"
           >
-            Cancel + refund
+            Cancel Plan
           </button>
         </div>
-        <p className="mt-2 text-[10px] text-muted">
-          First plan is usually ID 0. Pull only works after the interval has passed.
-        </p>
       </div>
 
-      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+      {error ? <p className="mt-3 text-xs font-medium text-danger">{error}</p> : null}
       {txHash ? (
         <a
           href={`${explorer}/tx/${txHash}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs text-success underline"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-success underline hover:text-accent"
         >
           Tx {txHash.slice(0, 10)}… <ExternalLink className="h-3 w-3" />
         </a>
