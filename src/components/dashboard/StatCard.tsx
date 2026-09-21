@@ -40,13 +40,13 @@ export default function StatCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
-      className="card-surface rounded-2xl p-4"
+      className="card-surface rounded-2xl border border-slate-800 p-4"
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
           {label}
         </p>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-accent">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent border border-accent/20">
           <Icon className="h-4 w-4" aria-hidden />
         </span>
       </div>
@@ -57,16 +57,16 @@ export default function StatCard({
         <div>
           {trend ? (
             <p
-              className={`text-xs font-medium ${
+              className={`text-xs font-semibold ${
                 trendUp ? "text-success" : "text-danger"
               }`}
             >
               {trendUp ? "↑" : "↓"} {trend}
             </p>
           ) : null}
-          {hint ? <p className="text-[11px] text-muted">{hint}</p> : null}
+          {hint ? <p className="text-[11px] font-medium text-slate-400">{hint}</p> : null}
         </div>
-        <svg width={w} height={h} className="opacity-80" aria-hidden>
+        <svg width={w} height={h} className="opacity-90" aria-hidden>
           <polyline
             fill="none"
             stroke="currentColor"
