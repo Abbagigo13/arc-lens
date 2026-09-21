@@ -106,4 +106,4 @@ Links
 Arc: https://arc.network
 Docs: https://docs.arc.io
 Studio: https://studio.arc.io
-Hub: 0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7
+Hub: https://arc-lens-alpha.vercel.app/
