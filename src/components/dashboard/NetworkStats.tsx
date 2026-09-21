@@ -73,16 +73,16 @@ export default function NetworkStats() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Overview</h2>
-          <p className="text-xs text-muted">Network pulse · last refresh ~12s</p>
+          <h2 className="text-base font-semibold text-foreground">Overview</h2>
+          <p className="text-xs text-slate-400">Live RPC signals · auto-refreshed (~12s)</p>
         </div>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${
             stats.status === "live"
-              ? "bg-success/15 text-success"
+              ? "bg-success/15 text-success border-success/30"
               : stats.status === "error"
-                ? "bg-danger/15 text-danger"
-                : "bg-muted/20 text-muted"
+                ? "bg-danger/15 text-danger border-danger/30"
+                : "bg-muted/20 text-slate-300 border-slate-700"
           }`}
         >
           <span
@@ -115,7 +115,7 @@ export default function NetworkStats() {
         />
         <StatCard
           label="Gas price"
-          value={`${stats.gasGwei}`}
+          value={stats.gasGwei}
           hint="gwei · paid in USDC"
           trend="stable"
           trendUp
@@ -134,7 +134,7 @@ export default function NetworkStats() {
         <StatCard
           label="Activity"
           value={stats.status === "live" ? "Streaming" : "—"}
-          hint="RPC heartbeat"
+          hint="RPC Heartbeat"
           trend={stats.status === "live" ? "ok" : "—"}
           trendUp={stats.status === "live"}
           icon={Activity}
