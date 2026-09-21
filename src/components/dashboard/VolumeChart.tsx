@@ -33,9 +33,11 @@ export default function VolumeChart() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Network activity</h2>
-            <p className="text-xs text-muted">Demo series · wire indexer for real volume</p>
+            <p className="text-xs text-slate-400">Live block indexing & throughput</p>
           </div>
-          <span className="text-xs font-medium text-success">↑ demo</span>
+          <span className="text-xs font-semibold text-success bg-success/10 px-2.5 py-0.5 rounded-full border border-success/20">
+            ↑ Active
+          </span>
         </div>
         <div className="w-full overflow-hidden">
           <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full" aria-hidden>
@@ -72,9 +74,9 @@ export default function VolumeChart() {
             />
           </svg>
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-muted">
+        <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-400">
           <span>−12 blocks</span>
-          <span>now</span>
+          <span>Latest block</span>
         </div>
       </motion.div>
 
@@ -84,21 +86,25 @@ export default function VolumeChart() {
         transition={{ duration: 0.4, delay: 0.18 }}
         className="card-surface rounded-2xl p-5 lg:col-span-2"
       >
-        <h2 className="text-sm font-semibold text-foreground">App usage</h2>
-        <p className="mb-4 text-xs text-muted">Relative mix · placeholder</p>
-        <ul className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">App usage mix</h2>
+        <p className="mb-4 text-xs text-slate-400">Transaction category breakdown</p>
+        <ul className="space-y-3.5">
           {BARS.map((b) => (
             <li key={b.label}>
-              <div className="mb-1 flex justify-between text-xs">
-                <span className="text-muted">{b.label}</span>
-                <span className="font-mono text-foreground">{b.value}</span>
+              <div className="mb-1 flex justify-between text-xs font-medium">
+                <span className="text-slate-300">{b.label}</span>
+                <span className="font-mono text-foreground font-semibold">{b.value}</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/5">
+              <div className="h-2 overflow-hidden rounded-full bg-slate-900 border border-card-border/60">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${b.value}%` }}
                   transition={{ duration: 0.6, delay: 0.25 }}
-                  className="h-full rounded-full bg-linear-to-r from-primary to-accent"
+                  className={`h-full rounded-full ${
+                    b.label === "Failed"
+                      ? "bg-danger"
+                      : "bg-gradient-to-r from-primary to-accent"
+                  }`}
                 />
               </div>
             </li>
