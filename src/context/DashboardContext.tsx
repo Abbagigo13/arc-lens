@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { DEFAULT_ARC } from "@/lib/arc";
 
+// Action Intent type definitions for AI automation hooks
+export type ActionIntent =
+  | { type: "SWAP"; fromToken: string; toToken: string; amount: string }
+  | { type: "SEND"; recipient: string; amount: string; token: string }
+  | { type: "RECURRING"; amount: string; intervalSeconds: number; recipient?: string };
+
 export type DashboardState = {
   network: {
     block: string;
