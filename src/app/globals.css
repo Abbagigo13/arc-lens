@@ -85,3 +85,25 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+.card-surface {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(11, 18, 32, 0.98) 100%);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08), 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+}
+
+/* Base input styling for high contrast across form elements */
+input, select, textarea {
+  background-color: rgba(3, 7, 18, 0.75) !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+input::placeholder {
+  color: #64748b !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent) !important;
+  outline: 2px solid rgba(34, 211, 238, 0.2) !important;
+}
