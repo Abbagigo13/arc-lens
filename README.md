@@ -24,10 +24,10 @@ Built for the ARC Microgrants track: product on Arc + USDC as payment.
 ## Networks
 
 | | Testnet | Mainnet |
-|--|---------|---------|
+| -- | --------- | --------- |
 | Chain ID | `5042002` | `5042` |
 | RPC | `https://rpc.testnet.arc.network` | `https://rpc.mainnet.arc.io` |
-| Explorer | https://explorer.testnet.arc.io | https://explorer.arc.io |
+| Explorer | <https://explorer.testnet.arc.io> | <https://explorer.arc.io> |
 
 Switch app network in `src/lib/arc.ts`:
 
