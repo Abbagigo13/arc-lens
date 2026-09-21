@@ -3,20 +3,41 @@ import OpenAI from "openai";
 
 export const runtime = "nodejs";
 
-const SYSTEM_PROMPT = `You are ArcLens AI, a clear guide for the Arc blockchain (Circle's L1, USDC-native gas).
+const SYSTEM_PROMPT = `You are ArcLens AI, an intelligent agent and guide for the Arc blockchain (Circle's L1, USDC-native gas).
 
-Always use the LIVE DASHBOARD CONTEXT when the user asks about blocks, gas, chain, activity, or "what do you see".
-Explain numbers in plain English. Be concise.
+You have live visibility into the user's dashboard context. Always use this real-time snapshot when answering questions about live metrics, user balances, or recent transactions. Explain numbers clearly and concisely in plain English.
 
-If they ask to swap, send, or set up recurring payments, tell them to use phrases like:
-- swap 0.01 USDC
-- send 0.01 to me
-- recurring 0.01 every 60
-(The app will show a confirm card; you never sign for them.)
+Arc Facts:
+- Chain ID: 5042 (Mainnet) / 5042002 (Testnet)
+- Gas Token: Native USDC
+- Focus: Sub-second finality & stablecoin FX liquidity
 
-Arc facts: chain 5042 mainnet / 5042002 testnet, gas paid in USDC, sub-second finality, stablecoin FX focus.`;
+Intent Execution:
+If the user asks to swap, send, or create recurring transfers, guide them or execute using formatted intent phrases like:
+- "swap 0.01 USDC"
+- "send 0.01 to me" (or to 0x...)
+- "recurring 0.01 every 60"
+(Note: You only propose the action UI card; you never sign transactions or hold private keys.)`;
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
+
+type DashboardContext = {
+  network?: {
+    block?: string;
+    gasGwei?: string;
+    chainId?: string;
+    status?: string;
+  };
+  user?: {
+    address?: string | null;
+    usdcBalance?: string;
+    eurcCredit?: string | null;
+    isUnlocked?: boolean;
+  };
+  activity?: {
+    recentTxs?: Array<{ hash: string; type: string; timestamp: number }>;
+  };
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,14 +45,16 @@ export async function POST(req: NextRequest) {
     if (!apiKey) {
       return NextResponse.json(
         { error: "Missing DASHSCOPE_API_KEY in .env.local" },
-        { status: 500 },
+        { status: 500 }
       );
     }
 
     const body = await req.json();
     const messages = (body.messages ?? []) as ChatMessage[];
-    const networkContext = body.networkContext as
-      | { block?: string; gasGwei?: string; chainId?: string }
+    
+    // Support both legacy networkContext and full dashboardState
+    const dashboardState = (body.dashboardState ?? body.networkContext) as
+      | DashboardContext
       | undefined;
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -45,9 +68,27 @@ export async function POST(req: NextRequest) {
         "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
     });
 
-    const contextNote = networkContext
-      ? `\n\nLive dashboard context (may be slightly stale):\n- Latest block: ${networkContext.block ?? "n/a"}\n- Gas: ${networkContext.gasGwei ?? "n/a"} gwei (paid in USDC)\n- Chain ID: ${networkContext.chainId ?? "n/a"}`
-      : "";
+    // Format rich snapshot into the prompt
+    let contextNote = "";
+    if (dashboardState) {
+      const net = dashboardState.network;
+      const usr = dashboardState.user;
+      const act = dashboardState.activity;
+
+      contextNote = `\n\n--- LIVE DASHBOARD SNAPSHOT ---
+• Latest Block: ${net?.block ?? "N/A"}
+• Gas Price: ${net?.gasGwei ?? "N/A"} Gwei (paid in USDC)
+• Chain ID: ${net?.chainId ?? "N/A"}
+• RPC Status: ${net?.status ?? "unknown"}
+• Wallet Connected: ${usr?.address ? usr.address : "No wallet connected"}
+• EURC Credit Balance: ${usr?.eurcCredit ?? "0"}
+• Recent Transactions: ${
+        act?.recentTxs?.length
+          ? JSON.stringify(act.recentTxs)
+          : "No recent transactions this session"
+      }
+----------------------------------`;
+    }
 
     const completion = await client.chat.completions.create({
       model: process.env.DASHSCOPE_MODEL ?? "qwen-plus",
