@@ -58,13 +58,11 @@ function parseAction(
 ): PendingAction | null {
   const t = text.trim();
 
-  // swap 0.01 or swap 0.01 usdc
   const swap = t.match(/swap\s+(\d+(?:\.\d+)?)\s*(?:usdc)?/i);
   if (swap) {
     return { type: "swap", amount: swap[1] };
   }
 
-  // send 0.01 to 0x...  OR  send 0.01 to me
   const sendTo = t.match(
     /send\s+(\d+(?:\.\d+)?)\s*(?:usdc)?\s+to\s+(0x[a-fA-F0-9]{40}|me)/i,
   );
@@ -77,8 +75,6 @@ function parseAction(
     return { type: "send", to, amount: sendTo[1] };
   }
 
-  // recurring 0.01 to 0x... every 60
-  // recurring 0.01 every 60  (to me)
   const rec = t.match(
     /recurring\s+(\d+(?:\.\d+)?)\s*(?:usdc)?(?:\s+to\s+(0x[a-fA-F0-9]{40}|me))?\s*(?:every\s+(\d+)\s*(?:s|sec|seconds)?)?/i,
   );
@@ -116,7 +112,7 @@ export default function AiPanel({ networkContext }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      text: "Hi — I’m ArcLens AI. Try: “swap 0.01 USDC”, “send 0.01 to me”, or “recurring 0.01 every 60”. I’ll propose an action; you always confirm in your wallet.",
+      text: "Hi — I’m ArcLens AI. Try typing “swap 0.01 USDC”, “send 0.01 to me”, or “recurring 0.01 every 60”. I propose actions; you confirm in your wallet.",
     },
   ]);
   const [busy, setBusy] = useState(false);
@@ -163,7 +159,7 @@ export default function AiPanel({ networkContext }: Props) {
       return;
     }
     if (!onArc) {
-      setError("Switch wallet to Arc Mainnet (5042) first.");
+      setError("Switch wallet to Arc Network (5042) first.");
       return;
     }
     setUnlocking(true);
@@ -187,7 +183,7 @@ export default function AiPanel({ networkContext }: Props) {
       return;
     }
     if (!onArc) {
-      setError("Switch to Arc Mainnet first.");
+      setError("Switch to Arc Network first.");
       return;
     }
     setActionBusy(true);
@@ -240,7 +236,6 @@ export default function AiPanel({ networkContext }: Props) {
     const nextMessages: Message[] = [...messages, { role: "user", text: q }];
     setMessages(nextMessages);
 
-    // Local intent → action card (always requires Confirm)
     const action = parseAction(q, address);
     if (action) {
       setPending(action);
@@ -248,13 +243,13 @@ export default function AiPanel({ networkContext }: Props) {
         action.type === "send"
           ? `Send ${action.amount} USDC → ${action.to.slice(0, 6)}…${action.to.slice(-4)}`
           : action.type === "swap"
-            ? `Swap ${action.amount} USDC → EURC credit (MiniSwap)`
+            ? `Swap ${action.amount} USDC → EURC credit`
             : `Recurring ${action.amount} USDC every ${action.intervalSec}s → ${action.recipient.slice(0, 6)}…`;
       setMessages((m) => [
         ...m,
         {
           role: "assistant",
-          text: `I can do that on Arc Mainnet:\n\n**${label}**\n\nConfirm below — nothing is signed until you approve in your wallet.`,
+          text: `I can execute that on Arc Network:\n\n**${label}**\n\nConfirm below — nothing executes until you sign in your wallet.`,
         },
       ]);
       return;
@@ -308,44 +303,44 @@ export default function AiPanel({ networkContext }: Props) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.15 }}
-      className="card-surface flex h-full min-h-105 flex-col rounded-2xl"
+      className="card-surface flex h-full min-h-[460px] flex-col rounded-2xl border border-slate-800"
     >
-      <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
-        <div className="flex items-center gap-2">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 text-accent">
-            <Bot className="h-4 w-4" aria-hidden />
+      <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent border border-accent/20">
+            <Bot className="h-5 w-5" aria-hidden />
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Arc AI guide</h2>
-            <p className="text-xs text-muted">Qwen · actions need your confirm</p>
+            <h2 className="text-sm font-semibold text-foreground">Arc AI Guide</h2>
+            <p className="text-xs text-slate-400">Qwen AI · Requires wallet confirmation</p>
           </div>
         </div>
         {checking ? (
-          <span className="text-xs text-muted">Checking…</span>
+          <span className="text-xs text-slate-400">Checking…</span>
         ) : unlocked ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2.5 py-1 text-xs font-medium text-success">
+          <span className="inline-flex items-center gap-1 rounded-full bg-success/15 border border-success/30 px-2.5 py-1 text-xs font-semibold text-success">
             <Sparkles className="h-3 w-3" aria-hidden />
             Unlocked
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-accent-warm/15 px-2.5 py-1 text-xs font-medium text-accent-warm">
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent-warm/15 border border-accent-warm/30 px-2.5 py-1 text-xs font-semibold text-accent-warm">
             <Lock className="h-3 w-3" aria-hidden />
             Paywall
           </span>
         )}
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+      <div className="flex-1 space-y-3.5 overflow-y-auto px-5 py-4">
         <AnimatePresence initial={false}>
           {messages.map((msg, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`max-w-[95%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[95%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === "user"
-                  ? "ml-auto bg-primary/25 text-foreground"
-                  : "bg-white/5 text-muted"
+                  ? "ml-auto bg-primary/30 text-foreground border border-primary/40"
+                  : "bg-slate-900/90 text-slate-200 border border-slate-800"
               }`}
             >
               {msg.text}
@@ -354,40 +349,40 @@ export default function AiPanel({ networkContext }: Props) {
         </AnimatePresence>
 
         {pending ? (
-          <div className="rounded-xl border border-primary/40 bg-primary/10 p-3">
-            <p className="text-xs font-medium text-foreground">
+          <div className="rounded-xl border border-primary/50 bg-primary/10 p-3.5">
+            <p className="text-xs font-semibold text-foreground">
               {pending.type === "send" && (
                 <>
-                  <Send className="mr-1 inline h-3.5 w-3.5" />
+                  <Send className="mr-1.5 inline h-3.5 w-3.5 text-accent" />
                   Send {pending.amount} USDC
                 </>
               )}
               {pending.type === "swap" && (
                 <>
-                  <ArrowDownUp className="mr-1 inline h-3.5 w-3.5" />
+                  <ArrowDownUp className="mr-1.5 inline h-3.5 w-3.5 text-accent" />
                   Swap {pending.amount} USDC
                 </>
               )}
               {pending.type === "recurring" && (
                 <>
-                  <Repeat className="mr-1 inline h-3.5 w-3.5" />
-                  Plan {pending.amount} / {pending.intervalSec}s
+                  <Repeat className="mr-1.5 inline h-3.5 w-3.5 text-accent" />
+                  Recurring {pending.amount} USDC / {pending.intervalSec}s
                 </>
               )}
             </p>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 onClick={runPending}
                 disabled={actionBusy}
-                className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                className="cursor-pointer rounded-lg bg-primary px-3.5 py-1.5 text-xs font-semibold text-white transition-all hover:bg-primary-soft disabled:opacity-50"
               >
-                {actionBusy ? "Confirm in wallet…" : "Confirm in wallet"}
+                {actionBusy ? "Confirming in Wallet…" : "Confirm in Wallet"}
               </button>
               <button
                 type="button"
                 onClick={() => setPending(null)}
-                className="cursor-pointer rounded-lg border border-card-border px-3 py-1.5 text-xs text-muted"
+                className="cursor-pointer rounded-lg border border-slate-700 bg-slate-900 px-3.5 py-1.5 text-xs text-slate-300 hover:text-foreground"
               >
                 Cancel
               </button>
@@ -400,65 +395,64 @@ export default function AiPanel({ networkContext }: Props) {
             href={`${explorer}/tx/${actionTx}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-success underline"
+            className="inline-flex items-center gap-1 text-xs font-medium text-success underline"
           >
-            Action tx {actionTx.slice(0, 10)}…
+            Action Tx {actionTx.slice(0, 10)}…
             <ExternalLink className="h-3 w-3" />
           </a>
         ) : null}
 
         {busy ? (
-          <div className="animate-pulse text-xs text-muted">Qwen is thinking…</div>
+          <div className="animate-pulse text-xs text-slate-400">Qwen is generating response…</div>
         ) : null}
-        {error ? <div className="text-xs text-danger">{error}</div> : null}
+        {error ? <div className="text-xs font-medium text-danger">{error}</div> : null}
       </div>
 
       {!unlocked ? (
-        <div className="space-y-2 border-t border-card-border px-5 py-4">
-          <p className="text-xs text-muted">
-            Pay <span className="font-medium text-foreground">0.01 USDC</span> on Arc
-            Mainnet to unlock AI actions.
+        <div className="space-y-2.5 border-t border-slate-800 px-5 py-4">
+          <p className="text-xs text-slate-300">
+            Pay <span className="font-semibold text-foreground">0.01 USDC</span> on Arc Network to unlock AI actions.
           </p>
           <button
             type="button"
             onClick={unlockWithUsdc}
             disabled={unlocking}
-            className="w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-soft disabled:opacity-50"
+            className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:opacity-50"
           >
             {!isConnected
-              ? "Connect wallet to unlock"
+              ? "Connect Wallet to Unlock"
               : unlocking
-                ? "Confirm 0.01 USDC…"
+                ? "Confirm 0.01 USDC Payment…"
                 : "Unlock with 0.01 USDC"}
           </button>
           <button
             type="button"
             onClick={demoUnlock}
-            className="w-full cursor-pointer rounded-xl border border-card-border px-4 py-2 text-xs text-muted hover:text-foreground"
+            className="w-full cursor-pointer rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-xs font-medium text-slate-300 hover:text-foreground hover:border-slate-700"
           >
-            Demo unlock (no payment)
+            Demo Unlock (No Payment)
           </button>
           {unlockTx ? (
             <a
               href={explorerTxUrl(unlockTx)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-success underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-success underline"
             >
-              Unlock tx {unlockTx.slice(0, 10)}…
+              Unlock Tx {unlockTx.slice(0, 10)}…
               <ExternalLink className="h-3 w-3" />
             </a>
           ) : null}
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2 border-t border-card-border px-5 py-3">
+          <div className="flex flex-wrap gap-2 border-t border-slate-800 px-5 py-3">
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => send(s)}
-                className="cursor-pointer rounded-full border border-card-border bg-card px-3 py-1 text-xs text-muted hover:border-accent/40 hover:text-foreground"
+                className="cursor-pointer rounded-full border border-slate-800 bg-slate-900 px-3 py-1 text-xs text-slate-300 transition-all hover:border-accent/50 hover:text-foreground"
               >
                 {s}
               </button>
@@ -469,19 +463,19 @@ export default function AiPanel({ networkContext }: Props) {
               e.preventDefault();
               send();
             }}
-            className="flex gap-2 border-t border-card-border px-5 py-4"
+            className="flex gap-2 border-t border-slate-800 px-5 py-4"
           >
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder='Try "swap 0.01 USDC"'
-              className="flex-1 rounded-xl border border-card-border bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary/50"
+              className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-slate-500 focus:border-accent focus:ring-1 focus:ring-accent"
               aria-label="Ask the AI"
             />
             <button
               type="submit"
               disabled={busy || !input.trim()}
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-accent px-3 text-background disabled:opacity-40"
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-accent px-4 text-background font-semibold disabled:opacity-40 hover:opacity-90 transition-opacity"
               aria-label="Send"
             >
               <Send className="h-4 w-4" />
