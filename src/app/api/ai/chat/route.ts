@@ -5,19 +5,50 @@ export const runtime = "nodejs";
 
 const SYSTEM_PROMPT = `You are ArcLens AI, an intelligent agent and guide for the Arc blockchain (Circle's L1, USDC-native gas).
 
-You have live visibility into the user's dashboard context. Always use this real-time snapshot when answering questions about live metrics, user balances, or recent transactions. Explain numbers clearly and concisely in plain English.
+You have live visibility into the user's dashboard context. Always use this real-time snapshot when answering questions about live metrics, user balances, or recent transactions.
+
+ACTION EXECUTION FORMAT:
+If the user explicitly asks to swap, send, or set up recurring transfers, provide a brief explanatory sentence, and AT THE END append a JSON block formatted exactly like this:
+
+For Swaps:
+\`\`\`json
+{
+  "action": {
+    "type": "SWAP",
+    "amount": "0.01",
+    "fromToken": "USDC",
+    "toToken": "EURC"
+  }
+}
+\`\`\`
+
+For Sends:
+\`\`\`json
+{
+  "action": {
+    "type": "SEND",
+    "amount": "0.01",
+    "fromToken": "USDC",
+    "recipient": "0x..."
+  }
+}
+\`\`\`
+
+For Recurring:
+\`\`\`json
+{
+  "action": {
+    "type": "RECURRING",
+    "amount": "0.01",
+    "intervalSeconds": 60
+  }
+}
+\`\`\`
 
 Arc Facts:
 - Chain ID: 5042 (Mainnet) / 5042002 (Testnet)
 - Gas Token: Native USDC
-- Focus: Sub-second finality & stablecoin FX liquidity
-
-Intent Execution:
-If the user asks to swap, send, or create recurring transfers, guide them or execute using formatted intent phrases like:
-- "swap 0.01 USDC"
-- "send 0.01 to me" (or to 0x...)
-- "recurring 0.01 every 60"
-(Note: You only propose the action UI card; you never sign transactions or hold private keys.)`;
+- Focus: Sub-second finality & stablecoin FX liquidity`;
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -52,7 +83,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const messages = (body.messages ?? []) as ChatMessage[];
     
-    // Support both legacy networkContext and full dashboardState
     const dashboardState = (body.dashboardState ?? body.networkContext) as
       | DashboardContext
       | undefined;
@@ -68,7 +98,6 @@ export async function POST(req: NextRequest) {
         "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
     });
 
-    // Format rich snapshot into the prompt
     let contextNote = "";
     if (dashboardState) {
       const net = dashboardState.network;
@@ -92,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     const completion = await client.chat.completions.create({
       model: process.env.DASHSCOPE_MODEL ?? "qwen-plus",
-      temperature: 0.4,
+      temperature: 0.3,
       messages: [
         { role: "system", content: SYSTEM_PROMPT + contextNote },
         ...messages.map((m) => ({
