@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowDownUp, ExternalLink, RefreshCw } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
+import { useDashboard } from "@/context/DashboardContext"; // <-- Add this import
 import {
   MINI_SWAP_ADDRESS,
   SELECTORS,
@@ -14,6 +15,7 @@ import { DEFAULT_ARC } from "@/lib/arc";
 
 export default function SwapPanel() {
   const { isConnected, onArc, address, connect, sendContractTx } = useWallet();
+  const { addTx, updateUser } = useDashboard(); // <-- Consume context
   const [amount, setAmount] = useState("0.01");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -28,10 +30,11 @@ export default function SwapPanel() {
     try {
       const c = await readCreditOf(address, DEFAULT_ARC.rpcUrls[0]);
       setCredit(c);
+      updateUser({ eurcCredit: c, address }); // Sync wallet credit into context
     } catch {
       setCredit(null);
     }
-  }, [address]);
+  }, [address, updateUser]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -62,6 +65,13 @@ export default function SwapPanel() {
         value,
       );
       setTxHash(hash);
+
+      // Log transaction to global dashboard state so AI panel detects it
+      addTx({
+        hash,
+        type: `SWAP: ${amount} USDC → EURC Credit`,
+      });
+
       setTimeout(refreshCredit, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Swap failed");
