@@ -1,7 +1,7 @@
 "use client";
 
 import { Wallet, X } from "lucide-react";
-import { useWallet } from "@/hooks/useWallet";
+import { useWallet, CustomWalletOption } from "@/hooks/useWallet";
 
 export default function ConnectWallet() {
   const {
@@ -24,10 +24,12 @@ export default function ConnectWallet() {
           type="button"
           onClick={disconnect}
           className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-card-border bg-card px-3.5 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40"
-          title="Click to disconnect (local only)"
+          title="Click to disconnect"
         >
           <span
-            className={`h-2 w-2 rounded-full ${onArc ? "bg-success" : "bg-accent-warm"}`}
+            className={`h-2 w-2 rounded-full ${
+              onArc ? "bg-success" : "bg-accent-warm"
+            }`}
           />
           {shortAddress}
         </button>
@@ -45,10 +47,6 @@ export default function ConnectWallet() {
 
   return (
     <div className="relative flex flex-col items-end gap-1">
-      {/* 
-        Open the picker directly on click instead of executing a generic request 
-        that gets hijacked by SubWallet 
-      */}
       <button
         type="button"
         onClick={() => setPickerOpen(!pickerOpen)}
@@ -58,6 +56,7 @@ export default function ConnectWallet() {
         <Wallet className="h-4 w-4 text-accent" aria-hidden />
         {connecting ? "Connecting…" : "Connect wallet"}
       </button>
+
       {error ? (
         <span className="max-w-55 text-[10px] text-danger">{error}</span>
       ) : null}
@@ -75,25 +74,35 @@ export default function ConnectWallet() {
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
+
           <ul className="py-1">
             {wallets && wallets.length > 0 ? (
-              wallets.map((w) => (
+              wallets.map((w: CustomWalletOption) => (
                 <li key={w.id}>
                   <button
                     type="button"
-                    onClick={() => {
-                      connectWith(w);
-                      setPickerOpen(false);
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-white/5"
+                    onClick={() => connectWith(w)}
+                    className="flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-white/5"
                   >
-                    <Wallet className="h-4 w-4 text-accent" />
-                    {w.name}
+                    <div className="flex items-center gap-2">
+                      {w.icon ? (
+                        <img
+                          src={w.icon}
+                          alt={w.name}
+                          className="h-4 w-4 object-contain rounded"
+                        />
+                      ) : (
+                        <Wallet className="h-4 w-4 text-accent" />
+                      )}
+                      <span>{w.name}</span>
+                    </div>
                   </button>
                 </li>
               ))
             ) : (
-              <li className="px-3 py-2 text-xs text-muted">No wallets detected</li>
+              <li className="px-3 py-3 text-center text-xs text-muted">
+                No wallets detected
+              </li>
             )}
           </ul>
         </div>
