@@ -10,7 +10,6 @@ export default function ConnectWallet() {
     onArc,
     connecting,
     error,
-    connect,
     connectWith,
     disconnect,
     wallets,
@@ -46,9 +45,13 @@ export default function ConnectWallet() {
 
   return (
     <div className="relative flex flex-col items-end gap-1">
+      {/* 
+        Open the picker directly on click instead of executing a generic request 
+        that gets hijacked by SubWallet 
+      */}
       <button
         type="button"
-        onClick={connect}
+        onClick={() => setPickerOpen(!pickerOpen)}
         disabled={connecting}
         className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-card-border bg-card px-3.5 py-1.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 disabled:opacity-50"
       >
@@ -73,18 +76,25 @@ export default function ConnectWallet() {
             </button>
           </div>
           <ul className="py-1">
-            {wallets.map((w) => (
-              <li key={w.id}>
-                <button
-                  type="button"
-                  onClick={() => connectWith(w)}
-                  className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-white/5"
-                >
-                  <Wallet className="h-4 w-4 text-accent" />
-                  {w.name}
-                </button>
-              </li>
-            ))}
+            {wallets && wallets.length > 0 ? (
+              wallets.map((w) => (
+                <li key={w.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      connectWith(w);
+                      setPickerOpen(false);
+                    }}
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-white/5"
+                  >
+                    <Wallet className="h-4 w-4 text-accent" />
+                    {w.name}
+                  </button>
+                </li>
+              ))
+            ) : (
+              <li className="px-3 py-2 text-xs text-muted">No wallets detected</li>
+            )}
           </ul>
         </div>
       ) : null}
