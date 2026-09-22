@@ -35,7 +35,13 @@ export function useWallet() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeProvider, setActiveProvider] = useState<any>(null);
 
-  const ARC_CHAIN_ID_HEX = `0x${ARC_MAINNET.id.toString(16)}`;
+  // Safely extract hex chain ID from ARC_MAINNET configuration
+  const arcChainHex =
+    "chainId" in ARC_MAINNET && typeof ARC_MAINNET.chainId === "string"
+      ? ARC_MAINNET.chainId
+      : "chainIdDecimal" in ARC_MAINNET
+      ? `0x${Number(ARC_MAINNET.chainIdDecimal).toString(16)}`
+      : "0x13b2";
 
   useEffect(() => {
     const handleAnnounce = (event: CustomEvent<EIP6963ProviderDetail>) => {
@@ -162,7 +168,7 @@ export function useWallet() {
   const isConnected = Boolean(account);
   const address = account;
   const shortAddress = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "";
-  const onArc = chainId ? chainId.toLowerCase() === ARC_CHAIN_ID_HEX.toLowerCase() : false;
+  const onArc = chainId ? chainId.toLowerCase() === arcChainHex.toLowerCase() : false;
 
   return {
     account,
