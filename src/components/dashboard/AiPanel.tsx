@@ -41,7 +41,6 @@ export default function AiPanel() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Execute 0.01 USDC unlock transaction on Arc
   const handleUnlockAI = async () => {
     if (!isConnected) {
       connect();
