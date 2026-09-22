@@ -1,144 +1,137 @@
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { NextResponse } from "next/server";
+import { HUB_ADDRESS, SELECTORS } from "@/lib/contracts";
+import { DEFAULT_ARC } from "@/lib/arc";
 
-export const runtime = "nodejs";
+// Address-based message counter to prevent localStorage wiping exploits
+const walletUsageMap = new Map<string, number>();
+const guestIpUsageMap = new Map<string, number>();
 
-const SYSTEM_PROMPT = `You are ArcLens AI, an intelligent agent and guide for the Arc blockchain (Circle's L1, USDC-native gas).
+const MAX_FREE_MESSAGES = 3;
 
-You have live visibility into the user's dashboard context. Always use this real-time snapshot when answering questions about live metrics, user balances, or recent transactions.
-
-ACTION EXECUTION FORMAT:
-If the user explicitly asks to swap, send, or set up recurring transfers, provide a brief explanatory sentence, and AT THE END append a JSON block formatted exactly like this:
-
-For Swaps:
-\`\`\`json
-{
-  "action": {
-    "type": "SWAP",
-    "amount": "0.01",
-    "fromToken": "USDC",
-    "toToken": "EURC"
-  }
-}
-\`\`\`
-
-For Sends:
-\`\`\`json
-{
-  "action": {
-    "type": "SEND",
-    "amount": "0.01",
-    "fromToken": "USDC",
-    "recipient": "0x..."
-  }
-}
-\`\`\`
-
-For Recurring:
-\`\`\`json
-{
-  "action": {
-    "type": "RECURRING",
-    "amount": "0.01",
-    "intervalSeconds": 60
-  }
-}
-\`\`\`
-
-Arc Facts:
-- Chain ID: 5042 (Mainnet) / 5042002 (Testnet)
-- Gas Token: Native USDC
-- Focus: Sub-second finality & stablecoin FX liquidity`;
-
-type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
-
-type DashboardContext = {
-  network?: {
-    block?: string;
-    gasGwei?: string;
-    chainId?: string;
-    status?: string;
-  };
-  user?: {
-    address?: string | null;
-    usdcBalance?: string;
-    eurcCredit?: string | null;
-    isUnlocked?: boolean;
-  };
-  activity?: {
-    recentTxs?: Array<{ hash: string; type: string; timestamp: number }>;
-  };
-};
-
-export async function POST(req: NextRequest) {
+// RPC call helper to verify on-chain unlock status directly from the contract
+async function checkOnChainUnlock(address: string): Promise<boolean> {
   try {
-    const apiKey = process.env.DASHSCOPE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Missing DASHSCOPE_API_KEY in .env.local" },
-        { status: 500 }
-      );
-    }
+    // Signature for unlocked(address) is 0xa87131b0
+    const cleanAddress = address.replace("0x", "").padStart(64, "0");
+    const data = `0xa87131b0${cleanAddress}`;
 
-    const body = await req.json();
-    const messages = (body.messages ?? []) as ChatMessage[];
-    
-    const dashboardState = (body.dashboardState ?? body.networkContext) as
-      | DashboardContext
-      | undefined;
-
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return NextResponse.json({ error: "messages required" }, { status: 400 });
-    }
-
-    const client = new OpenAI({
-      apiKey,
-      baseURL:
-        process.env.DASHSCOPE_BASE_URL ??
-        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    const res = await fetch(DEFAULT_ARC.rpcUrls[0], {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_call",
+        params: [{ to: HUB_ADDRESS, data }, "latest"],
+      }),
     });
 
-    let contextNote = "";
-    if (dashboardState) {
-      const net = dashboardState.network;
-      const usr = dashboardState.user;
-      const act = dashboardState.activity;
-
-      contextNote = `\n\n--- LIVE DASHBOARD SNAPSHOT ---
-• Latest Block: ${net?.block ?? "N/A"}
-• Gas Price: ${net?.gasGwei ?? "N/A"} Gwei (paid in USDC)
-• Chain ID: ${net?.chainId ?? "N/A"}
-• RPC Status: ${net?.status ?? "unknown"}
-• Wallet Connected: ${usr?.address ? usr.address : "No wallet connected"}
-• EURC Credit Balance: ${usr?.eurcCredit ?? "0"}
-• Recent Transactions: ${
-        act?.recentTxs?.length
-          ? JSON.stringify(act.recentTxs)
-          : "No recent transactions this session"
-      }
-----------------------------------`;
-    }
-
-    const completion = await client.chat.completions.create({
-      model: process.env.DASHSCOPE_MODEL ?? "qwen-plus",
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT + contextNote },
-        ...messages.map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        })),
-      ],
-    });
-
-    const text =
-      completion.choices[0]?.message?.content?.trim() ||
-      "I couldn’t generate a reply. Try again.";
-
-    return NextResponse.json({ text });
+    const json = await res.json();
+    return json.result && json.result !== "0x" && BigInt(json.result) === 1n;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[api/ai/chat]", message);
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error verifying on-chain status:", err);
+    return false;
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const { messages, snapshot } = await req.json();
+    const userAddress = snapshot?.address?.toLowerCase();
+    const clientIp = req.headers.get("x-forwarded-for") || "anonymous_ip";
+
+    let isUnlocked = false;
+
+    if (userAddress) {
+      // Direct RPC query to verify on-chain status
+      isUnlocked = await checkOnChainUnlock(userAddress);
+
+      if (!isUnlocked) {
+        const usageCount = walletUsageMap.get(userAddress) || 0;
+        if (usageCount >= MAX_FREE_MESSAGES) {
+          return NextResponse.json(
+            {
+              error: "PAYWALL_LOCKED",
+              reply:
+                "You've reached the 3-message free limit for this wallet. Unlock permanent AI access by paying 0.01 USDC on Arc.",
+            },
+            { status: 402 }
+          );
+        }
+        walletUsageMap.set(userAddress, usageCount + 1);
+      }
+    } else {
+      // Track non-connected guests by IP
+      const ipCount = guestIpUsageMap.get(clientIp) || 0;
+      if (ipCount >= MAX_FREE_MESSAGES) {
+        return NextResponse.json(
+          {
+            error: "PAYWALL_LOCKED",
+            reply:
+              "You've reached your 3 free visitor queries. Connect your wallet and pay 0.01 USDC on Arc to unlock unlimited AI features.",
+          },
+          { status: 402 }
+        );
+      }
+      guestIpUsageMap.set(clientIp, ipCount + 1);
+    }
+
+    // Call DashScope (Qwen model) with constructed prompt
+    const apiKey = process.env.DASHSCOPE_API_KEY;
+    const systemPrompt = `You are ArcLens AI, an intelligent agent on Arc Network (Chain ID: ${snapshot?.chainId || "5042"}).
+Current Network Snapshot:
+- Latest Block: ${snapshot?.block || "Unknown"}
+- Gas Price: ${snapshot?.gasGwei || "Unknown"} Gwei
+- Connected Wallet: ${userAddress || "Not Connected"}
+- USDC Balance: ${snapshot?.usdcBalance || "0"}
+
+You can answer questions or propose actions in JSON blocks like:
+{"type": "SWAP", "fromToken": "USDC", "toToken": "EURC", "amount": "0.01"}
+{"type": "SEND", "recipient": "0x...", "amount": "0.01", "token": "USDC"}
+{"type": "RECURRING", "amount": "0.01", "intervalSeconds": 60, "recipient": "0x..."}`;
+
+    const apiRes = await fetch(
+      "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "qwen-plus",
+          messages: [{ role: "system", content: systemPrompt }, ...messages],
+        }),
+      }
+    );
+
+    const data = await apiRes.json();
+    const replyContent = data.choices?.[0]?.message?.content || "No response received.";
+
+    // Parse potential JSON action intent
+    let intent = null;
+    const jsonMatch = replyContent.match(/\{[\s\S]*"type"\s*:\s*"(SWAP|SEND|RECURRING)"[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        intent = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        // Ignore parse errors if output wasn't structured JSON
+      }
+    }
+
+    return NextResponse.json({
+      reply: replyContent,
+      intent,
+      isUnlocked,
+      remainingFree: userAddress
+        ? Math.max(0, MAX_FREE_MESSAGES - (walletUsageMap.get(userAddress) || 0))
+        : Math.max(0, MAX_FREE_MESSAGES - (guestIpUsageMap.get(clientIp) || 0)),
+    });
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error", reply: "Sorry, I ran into an error processing that request." },
+      { status: 500 }
+    );
   }
 }
