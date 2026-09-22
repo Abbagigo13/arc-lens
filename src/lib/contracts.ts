@@ -1,4 +1,8 @@
 /** Arc Mainnet — from Arc Studio */
+export const HUB_ADDRESS =
+  (process.env.NEXT_PUBLIC_HUB_ADDRESS as `0x${string}`) ||
+  "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7";
+
 export const MINI_SWAP_ADDRESS =
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7" as const;
 
@@ -6,6 +10,7 @@ export const RECURRING_BUY_ADDRESS =
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7" as const;
 
 export const SELECTORS = {
+  unlock: "0xa87131b0",
   swap: "0x8119c065",
   redeem: "0x0b006a75",
   createPlan: "0xe95fc90f",
