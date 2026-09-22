@@ -1,4 +1,4 @@
-/** Arc Mainnet — from Arc Studio */
+/** Arc Mainnet — ArcLensHub Contract */
 export const HUB_ADDRESS =
   (process.env.NEXT_PUBLIC_HUB_ADDRESS as `0x${string}`) ||
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7";
