@@ -25,7 +25,7 @@ async function checkOnChainUnlock(address: string): Promise<boolean> {
     });
 
     const json = await res.json();
-    return json.result && json.result !== "0x" && BigInt(json.result) === 1n;
+    return json.result && json.result !== "0x" && BigInt(json.result) === BigInt(1);
   } catch (err) {
     console.error("Error verifying on-chain status:", err);
     return false;
