@@ -2,20 +2,18 @@ import { NextResponse } from "next/server";
 import { HUB_ADDRESS, SELECTORS } from "@/lib/contracts";
 import { DEFAULT_ARC } from "@/lib/arc";
 
-// Address-based message counter to prevent localStorage wiping exploits
 const walletUsageMap = new Map<string, number>();
 const guestIpUsageMap = new Map<string, number>();
 
 const MAX_FREE_MESSAGES = 3;
 
-// RPC call helper to verify on-chain unlock status directly from the contract
 async function checkOnChainUnlock(address: string): Promise<boolean> {
   try {
-    // Signature for unlocked(address) is 0xa87131b0
     const cleanAddress = address.replace("0x", "").padStart(64, "0");
-    const data = `0xa87131b0${cleanAddress}`;
+    const data = `${SELECTORS.unlock}${cleanAddress}`;
 
-    const res = await fetch(DEFAULT_ARC.rpcUrls[0], {
+    const rpcUrl = process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
+    const res = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -43,7 +41,6 @@ export async function POST(req: Request) {
     let isUnlocked = false;
 
     if (userAddress) {
-      // Direct RPC query to verify on-chain status
       isUnlocked = await checkOnChainUnlock(userAddress);
 
       if (!isUnlocked) {
@@ -61,7 +58,6 @@ export async function POST(req: Request) {
         walletUsageMap.set(userAddress, usageCount + 1);
       }
     } else {
-      // Track non-connected guests by IP
       const ipCount = guestIpUsageMap.get(clientIp) || 0;
       if (ipCount >= MAX_FREE_MESSAGES) {
         return NextResponse.json(
@@ -76,7 +72,6 @@ export async function POST(req: Request) {
       guestIpUsageMap.set(clientIp, ipCount + 1);
     }
 
-    // Call DashScope (Qwen model) with constructed prompt
     const apiKey = process.env.DASHSCOPE_API_KEY;
     const systemPrompt = `You are ArcLens AI, an intelligent agent on Arc Network (Chain ID: ${snapshot?.chainId || "5042"}).
 Current Network Snapshot:
@@ -108,7 +103,6 @@ You can answer questions or propose actions in JSON blocks like:
     const data = await apiRes.json();
     const replyContent = data.choices?.[0]?.message?.content || "No response received.";
 
-    // Parse potential JSON action intent
     let intent = null;
     const jsonMatch = replyContent.match(/\{[\s\S]*"type"\s*:\s*"(SWAP|SEND|RECURRING)"[\s\S]*\}/);
     if (jsonMatch) {
