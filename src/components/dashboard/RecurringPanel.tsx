@@ -27,18 +27,22 @@ export default function RecurringPanel() {
     e.preventDefault();
     setError(null);
     setTxHash(null);
+
     if (!isConnected) {
       connect();
       return;
     }
+
     if (!onArc) {
-      setError("Switch to Arc Network first.");
+      setError("Switch to Arc Network (chain 5042) first.");
       return;
     }
+
     if (!/^0x[a-fA-F0-9]{40}$/.test(recipient.trim())) {
       setError("Invalid recipient address format.");
       return;
     }
+
     setBusy(true);
     try {
       const amountWei = BigInt(toWeiHex(amount, 18));
@@ -64,10 +68,17 @@ export default function RecurringPanel() {
   async function onPull() {
     setError(null);
     setTxHash(null);
+
     if (!isConnected) {
       connect();
       return;
     }
+
+    if (!onArc) {
+      setError("Switch to Arc Network (chain 5042) first.");
+      return;
+    }
+
     setBusy(true);
     try {
       const id = BigInt(planId || "0");
@@ -84,10 +95,17 @@ export default function RecurringPanel() {
   async function onCancel() {
     setError(null);
     setTxHash(null);
+
     if (!isConnected) {
       connect();
       return;
     }
+
+    if (!onArc) {
+      setError("Switch to Arc Network (chain 5042) first.");
+      return;
+    }
+
     setBusy(true);
     try {
       const id = BigInt(planId || "0");
@@ -102,6 +120,12 @@ export default function RecurringPanel() {
   }
 
   const explorer = DEFAULT_ARC.blockExplorerUrls[0];
+  const isInvalidForm =
+    !recipient.trim() ||
+    !amount.trim() ||
+    Number(amount) <= 0 ||
+    isNaN(Number(amount)) ||
+    !intervalSec.trim();
 
   return (
     <motion.section
@@ -129,6 +153,7 @@ export default function RecurringPanel() {
             className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-mono text-foreground outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-300">Amount / pull</label>
@@ -149,17 +174,26 @@ export default function RecurringPanel() {
             />
           </div>
         </div>
+
         <button
           type="submit"
-          disabled={busy}
-          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:opacity-40"
+          disabled={busy || (isConnected && isInvalidForm)}
+          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {!isConnected ? "Connect Wallet" : busy ? "Confirm in Wallet…" : "Create Plan"}
+          {!isConnected
+            ? "Connect Wallet"
+            : !onArc
+              ? "Switch to Arc Network"
+              : busy
+                ? "Confirm in Wallet…"
+                : "Create Plan"}
         </button>
       </form>
 
       <div className="mt-5 border-t border-slate-800 pt-4">
-        <label className="mb-1.5 block text-xs font-medium text-slate-300">Manage Plan ID (0, 1, 2…)</label>
+        <label className="mb-1.5 block text-xs font-medium text-slate-300">
+          Manage Plan ID (0, 1, 2…)
+        </label>
         <input
           value={planId}
           onChange={(e) => setPlanId(e.target.value)}
@@ -169,18 +203,18 @@ export default function RecurringPanel() {
           <button
             type="button"
             onClick={onPull}
-            disabled={busy}
-            className="cursor-pointer rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-foreground hover:border-accent/50 disabled:opacity-40"
+            disabled={busy || (isConnected && planId === "")}
+            className="cursor-pointer rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-foreground hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Pull Due
+            {busy ? "Processing…" : "Pull Due"}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            disabled={busy}
-            className="cursor-pointer rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/20 disabled:opacity-40"
+            disabled={busy || (isConnected && planId === "")}
+            className="cursor-pointer rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Cancel Plan
+            {busy ? "Processing…" : "Cancel Plan"}
           </button>
         </div>
       </div>
