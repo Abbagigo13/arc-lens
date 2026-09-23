@@ -47,7 +47,7 @@ export default function AiPanel() {
       return;
     }
     if (!onArc) {
-      alert("Please switch your wallet to Arc Network.");
+      alert("Please switch your wallet to Arc Network (chain 5042).");
       return;
     }
 
@@ -222,7 +222,7 @@ export default function AiPanel() {
           <button
             onClick={handleUnlockAI}
             disabled={unlocking}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-xs font-semibold text-slate-950 hover:bg-accent/90 disabled:opacity-50 transition-all shadow-lg shadow-accent/10"
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-xs font-semibold text-slate-950 hover:bg-accent/90 disabled:opacity-50 transition-all shadow-lg shadow-accent/10 cursor-pointer"
           >
             {unlocking ? (
               <>
@@ -230,6 +230,8 @@ export default function AiPanel() {
               </>
             ) : !isConnected ? (
               "Connect Wallet to Unlock (0.01 USDC)"
+            ) : !onArc ? (
+              "Switch to Arc Network (Chain 5042)"
             ) : (
               "Pay 0.01 USDC on Arc to Unlock AI"
             )}
@@ -253,7 +255,7 @@ export default function AiPanel() {
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-slate-950 disabled:opacity-40 transition-all"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-slate-950 disabled:opacity-40 transition-all cursor-pointer"
           >
             <Send className="h-3.5 w-3.5" />
           </button>
