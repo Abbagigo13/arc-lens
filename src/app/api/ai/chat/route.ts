@@ -12,7 +12,8 @@ async function checkOnChainUnlock(address: string): Promise<boolean> {
     const cleanAddress = address.replace("0x", "").padStart(64, "0");
     const data = `${SELECTORS.unlock}${cleanAddress}`;
 
-    const rpcUrl = process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
     const res = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -25,7 +26,9 @@ async function checkOnChainUnlock(address: string): Promise<boolean> {
     });
 
     const json = await res.json();
-    return json.result && json.result !== "0x" && BigInt(json.result) === BigInt(1);
+    return (
+      json.result && json.result !== "0x" && BigInt(json.result) === BigInt(1)
+    );
   } catch (err) {
     console.error("Error verifying on-chain status:", err);
     return false;
@@ -82,8 +85,11 @@ Current Network Snapshot:
 
 You can answer questions or propose actions in JSON blocks like:
 {"type": "SWAP", "fromToken": "USDC", "toToken": "EURC", "amount": "0.01"}
+{"type": "REDEEM", "amount": "0.01"}
 {"type": "SEND", "recipient": "0x...", "amount": "0.01", "token": "USDC"}
-{"type": "RECURRING", "amount": "0.01", "intervalSeconds": 60, "recipient": "0x..."}`;
+{"type": "RECURRING", "amount": "0.01", "intervalSeconds": 60, "recipient": "0x..."}
+
+Use REDEEM when the user wants to convert their synthetic EURC credit back to USDC.`;
 
     const apiRes = await fetch(
       "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions",
@@ -101,15 +107,18 @@ You can answer questions or propose actions in JSON blocks like:
     );
 
     const data = await apiRes.json();
-    const replyContent = data.choices?.[0]?.message?.content || "No response received.";
+    const replyContent =
+      data.choices?.[0]?.message?.content || "No response received.";
 
     let intent = null;
-    const jsonMatch = replyContent.match(/\{[\s\S]*"type"\s*:\s*"(SWAP|SEND|RECURRING)"[\s\S]*\}/);
+    const jsonMatch = replyContent.match(
+      /\{[\s\S]*"type"\s*:\s*"(SWAP|REDEEM|SEND|RECURRING)"[\s\S]*\}/
+    );
     if (jsonMatch) {
       try {
         intent = JSON.parse(jsonMatch[0]);
       } catch (e) {
-        // Ignore parse errors if output wasn't structured JSON
+        // ignore parse errors
       }
     }
 
@@ -118,13 +127,19 @@ You can answer questions or propose actions in JSON blocks like:
       intent,
       isUnlocked,
       remainingFree: userAddress
-        ? Math.max(0, MAX_FREE_MESSAGES - (walletUsageMap.get(userAddress) || 0))
+        ? Math.max(
+            0,
+            MAX_FREE_MESSAGES - (walletUsageMap.get(userAddress) || 0)
+          )
         : Math.max(0, MAX_FREE_MESSAGES - (guestIpUsageMap.get(clientIp) || 0)),
     });
   } catch (error) {
     console.error("Chat API error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error", reply: "Sorry, I ran into an error processing that request." },
+      {
+        error: "Internal Server Error",
+        reply: "Sorry, I ran into an error processing that request.",
+      },
       { status: 500 }
     );
   }
