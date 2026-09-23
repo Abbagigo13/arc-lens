@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowDownUp, ExternalLink, RefreshCw } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
-import { useDashboard } from "@/context/DashboardContext"; // <-- Add this import
+import { useDashboard } from "@/context/DashboardContext";
 import {
   MINI_SWAP_ADDRESS,
   SELECTORS,
@@ -15,7 +15,7 @@ import { DEFAULT_ARC } from "@/lib/arc";
 
 export default function SwapPanel() {
   const { isConnected, onArc, address, connect, sendContractTx } = useWallet();
-  const { addTx, updateUser } = useDashboard(); // <-- Consume context
+  const { addTx, updateUser } = useDashboard();
   const [amount, setAmount] = useState("0.01");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function SwapPanel() {
     try {
       const c = await readCreditOf(address, DEFAULT_ARC.rpcUrls[0]);
       setCredit(c);
-      updateUser({ eurcCredit: c, address }); // Sync wallet credit into context
+      updateUser({ eurcCredit: c, address });
     } catch {
       setCredit(null);
     }
@@ -48,14 +48,17 @@ export default function SwapPanel() {
     e.preventDefault();
     setError(null);
     setTxHash(null);
+
     if (!isConnected) {
       connect();
       return;
     }
+
     if (!onArc) {
-      setError("Switch to Arc Network first.");
+      setError("Switch to Arc Network (chain 5042) first.");
       return;
     }
+
     setBusy(true);
     try {
       const value = toWeiHex(amount, 18);
@@ -66,7 +69,6 @@ export default function SwapPanel() {
       );
       setTxHash(hash);
 
-      // Log transaction to global dashboard state so AI panel detects it
       addTx({
         hash,
         type: `SWAP: ${amount} USDC → EURC Credit`,
@@ -81,6 +83,7 @@ export default function SwapPanel() {
   }
 
   const explorer = DEFAULT_ARC.blockExplorerUrls[0];
+  const isInvalidAmount = !amount.trim() || Number(amount) <= 0 || isNaN(Number(amount));
 
   return (
     <motion.section
@@ -123,6 +126,7 @@ export default function SwapPanel() {
               onChange={(e) => setAmount(e.target.value)}
               className="w-full bg-transparent font-mono text-lg font-semibold text-foreground outline-none"
               inputMode="decimal"
+              placeholder="0.00"
             />
             <span className="shrink-0 rounded-lg bg-primary/20 border border-primary/30 px-2.5 py-1 text-xs font-semibold text-accent">
               USDC
@@ -146,10 +150,16 @@ export default function SwapPanel() {
 
         <button
           type="submit"
-          disabled={busy || !amount.trim()}
-          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:opacity-40"
+          disabled={busy || (isConnected && isInvalidAmount)}
+          className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {!isConnected ? "Connect Wallet" : busy ? "Confirm in Wallet…" : "Swap on Arc"}
+          {!isConnected
+            ? "Connect Wallet"
+            : !onArc
+              ? "Switch to Arc Network"
+              : busy
+                ? "Confirm in Wallet…"
+                : "Swap on Arc"}
         </button>
       </form>
 
