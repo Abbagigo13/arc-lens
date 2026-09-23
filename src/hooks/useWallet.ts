@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { ARC_MAINNET } from "@/lib/arc";
 
 export interface EIP6963ProviderDetail {
@@ -26,7 +26,31 @@ declare global {
   }
 }
 
-export function useWallet() {
+interface WalletContextType {
+  account: string | null;
+  address: string | null;
+  shortAddress: string;
+  isConnected: boolean;
+  onArc: boolean;
+  connecting: boolean;
+  isConnecting: boolean;
+  error: string | null;
+  providers: EIP6963ProviderDetail[];
+  wallets: CustomWalletOption[];
+  pickerOpen: boolean;
+  setPickerOpen: (open: boolean) => void;
+  connect: () => void;
+  connectWith: (wallet: CustomWalletOption) => Promise<void>;
+  connectWithProvider: (detail: EIP6963ProviderDetail) => Promise<void>;
+  disconnect: () => void;
+  disconnectWallet: () => void;
+  sendNativeUsdc: (to: string, amountEth: string) => Promise<string>;
+  sendContractTx: (to: string, data: string, valueWei?: string) => Promise<string>;
+}
+
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [account, setAccount] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [providers, setProviders] = useState<EIP6963ProviderDetail[]>([]);
@@ -43,6 +67,7 @@ export function useWallet() {
       ? `0x${Number(ARC_MAINNET.chainIdDecimal).toString(16)}`
       : "0x13b2";
 
+  // Shared event setup & initial account check
   useEffect(() => {
     const handleAnnounce = (event: CustomEvent<EIP6963ProviderDetail>) => {
       setProviders((prev) => {
@@ -82,6 +107,34 @@ export function useWallet() {
       );
     };
   }, []);
+
+  // Listen to EIP-1193 provider events for real-time account and chain sync
+  useEffect(() => {
+    const provider = activeProvider || (typeof window !== "undefined" ? window.ethereum : null);
+    if (!provider || !provider.on) return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts && accounts.length > 0) {
+        setAccount(accounts[0]);
+      } else {
+        setAccount(null);
+      }
+    };
+
+    const handleChainChanged = (hexChainId: string) => {
+      setChainId(hexChainId);
+    };
+
+    provider.on("accountsChanged", handleAccountsChanged);
+    provider.on("chainChanged", handleChainChanged);
+
+    return () => {
+      if (provider.removeListener) {
+        provider.removeListener("accountsChanged", handleAccountsChanged);
+        provider.removeListener("chainChanged", handleChainChanged);
+      }
+    };
+  }, [activeProvider]);
 
   const connectWithProvider = async (detail: EIP6963ProviderDetail) => {
     setConnecting(true);
@@ -158,7 +211,6 @@ export function useWallet() {
     });
   };
 
-  // Map EIP-6963 detected providers or fallback to window.ethereum
   const eip6963Wallets: CustomWalletOption[] = providers.map((p) => ({
     id: p.info.uuid,
     name: p.info.name,
@@ -185,25 +237,39 @@ export function useWallet() {
   const shortAddress = account ? `${account.slice(0, 6)}...${account.slice(-4)}` : "";
   const onArc = chainId ? chainId.toLowerCase() === arcChainHex.toLowerCase() : false;
 
-  return {
-    account,
-    address,
-    shortAddress,
-    isConnected,
-    onArc,
-    connecting,
-    isConnecting: connecting,
-    error,
-    providers,
-    wallets,
-    pickerOpen,
-    setPickerOpen,
-    connect,
-    connectWith,
-    connectWithProvider,
-    disconnect,
-    disconnectWallet: disconnect,
-    sendNativeUsdc,
-    sendContractTx,
-  };
+  return (
+    <WalletContext.Provider
+      value={{
+        account,
+        address,
+        shortAddress,
+        isConnected,
+        onArc,
+        connecting,
+        isConnecting: connecting,
+        error,
+        providers,
+        wallets,
+        pickerOpen,
+        setPickerOpen,
+        connect,
+        connectWith,
+        connectWithProvider,
+        disconnect,
+        disconnectWallet: disconnect,
+        sendNativeUsdc,
+        sendContractTx,
+      }}
+    >
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+export function useWallet() {
+  const context = useContext(WalletContext);
+  if (!context) {
+    throw new Error("useWallet must be used within a WalletProvider");
+  }
+  return context;
 }
