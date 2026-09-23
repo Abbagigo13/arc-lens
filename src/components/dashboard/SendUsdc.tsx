@@ -18,14 +18,17 @@ export default function SendUsdc() {
     e.preventDefault();
     setError(null);
     setTxHash(null);
+
     if (!isConnected) {
       connect();
       return;
     }
+
     if (!onArc) {
       setError("Switch your wallet to Arc (chain 5042) first.");
       return;
     }
+
     setBusy(true);
     try {
       const hash = await sendNativeUsdc(to, amount);
@@ -73,6 +76,7 @@ export default function SendUsdc() {
             spellCheck={false}
           />
         </div>
+
         <div>
           <label className="mb-1.5 block text-xs font-medium text-slate-300" htmlFor="send-amount">
             Amount (USDC)
@@ -87,16 +91,19 @@ export default function SendUsdc() {
           />
         </div>
 
+        {/* UPDATED BUTTON LOGIC */}
         <button
           type="submit"
-          disabled={busy || !to.trim() || !amount.trim()}
+          disabled={busy || (isConnected && (!to.trim() || !amount.trim()))}
           className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-40"
         >
           {!isConnected
             ? "Connect Wallet to Send"
-            : busy
-              ? "Confirm in Wallet…"
-              : "Send USDC"}
+            : !onArc
+              ? "Switch to Arc Network"
+              : busy
+                ? "Confirm in Wallet…"
+                : "Send USDC"}
         </button>
       </form>
 
