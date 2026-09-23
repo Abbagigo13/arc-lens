@@ -3,10 +3,11 @@ export const HUB_ADDRESS =
   (process.env.NEXT_PUBLIC_HUB_ADDRESS as `0x${string}`) ||
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7";
 
-// Aliases — same hub contract handles swap, redeem, and recurring.
-// Kept as named exports so existing imports don't break.
-export const MINI_SWAP_ADDRESS = HUB_ADDRESS;
-export const RECURRING_BUY_ADDRESS = HUB_ADDRESS;
+export const MINI_SWAP_ADDRESS =
+  "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7" as const;
+
+export const RECURRING_BUY_ADDRESS =
+  "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7" as const;
 
 export const SELECTORS = {
   unlock: "0xa87131b0",
