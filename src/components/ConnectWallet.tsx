@@ -62,7 +62,8 @@ export default function ConnectWallet() {
       ) : null}
 
       {pickerOpen ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-card-border bg-card shadow-xl">
+        /* CHANGED LINE 56 BELOW: z-50 changed to z-[100] */
+        <div className="absolute right-0 top-full z-[100] mt-2 w-56 overflow-hidden rounded-xl border border-card-border bg-card shadow-xl">
           <div className="flex items-center justify-between border-b border-card-border px-3 py-2">
             <span className="text-xs font-medium text-foreground">Choose wallet</span>
             <button
