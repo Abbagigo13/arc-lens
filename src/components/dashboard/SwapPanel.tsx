@@ -62,16 +62,21 @@ export default function SwapPanel() {
     setBusy(true);
     try {
       const amountWei = BigInt(toWeiHex(amount, 18));
-      const paddedAmount = padUint(amountWei);
-      const selector =
-        direction === "USDC_TO_EURC" ? SELECTORS.swap : SELECTORS.redeem;
-      const data = selector + paddedAmount;
 
-      const hash = await sendContractTx(
-        MINI_SWAP_ADDRESS,
-        data,
-        "0x0" // no native value — hub pulls USDC via allowance
-      );
+      let data: string;
+      let value: string;
+
+      if (direction === "USDC_TO_EURC") {
+        // swap() is payable, takes NO args — send USDC as value
+        data = SELECTORS.swap;
+        value = "0x" + amountWei.toString(16);
+      } else {
+        // redeem(uint256) is nonpayable — pass amount as calldata, value = 0
+        data = SELECTORS.redeem + padUint(amountWei);
+        value = "0x0";
+      }
+
+      const hash = await sendContractTx(MINI_SWAP_ADDRESS, data, value);
       setTxHash(hash);
       setTimeout(fetchBalance, 3000);
     } catch (err) {
@@ -91,11 +96,11 @@ export default function SwapPanel() {
   };
 
   const explorer = DEFAULT_ARC.blockExplorerUrls[0];
-  const isInvalidForm = !amount.trim() || Number(amount) <= 0 || isNaN(Number(amount));
+  const isInvalidForm =
+    !amount.trim() || Number(amount) <= 0 || isNaN(Number(amount));
 
   return (
     <div className="rounded-2xl border border-slate-800 bg-[#0f1115] p-6 text-white">
-      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/20 text-blue-500">
@@ -120,7 +125,6 @@ export default function SwapPanel() {
         </button>
       </div>
 
-      {/* EURC Balance */}
       <div className="mb-4 flex items-center justify-between rounded-lg bg-slate-900/50 px-4 py-2 text-xs">
         <span className="text-slate-400">Your EURC* Credit</span>
         <span className="font-mono font-medium text-blue-400">
@@ -128,7 +132,6 @@ export default function SwapPanel() {
         </span>
       </div>
 
-      {/* Pay Input */}
       <div className="mb-2 rounded-xl border border-slate-800 bg-[#0a0c10] p-4">
         <div className="mb-1 flex justify-between text-xs text-slate-400">
           <span>You pay</span>
@@ -156,7 +159,6 @@ export default function SwapPanel() {
         </div>
       </div>
 
-      {/* Divider */}
       <div className="relative flex justify-center py-1">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="h-px w-full bg-slate-800" />
@@ -166,7 +168,6 @@ export default function SwapPanel() {
         </div>
       </div>
 
-      {/* Receive Input */}
       <div className="mb-6 mt-2 rounded-xl border border-slate-800 bg-[#0a0c10] p-4">
         <div className="mb-1 text-xs text-slate-400">You receive</div>
         <div className="flex items-center justify-between">
@@ -179,7 +180,6 @@ export default function SwapPanel() {
         </div>
       </div>
 
-      {/* Action Button */}
       <button
         onClick={handleSwap}
         disabled={busy || (isConnected && isInvalidForm)}
