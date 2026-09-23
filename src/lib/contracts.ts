@@ -17,7 +17,8 @@ export const SELECTORS = {
   deposit: "0xb6b55f25",
   pull: "0x4d0392a8",
   cancel: "0x40e58ee5",
-  creditOf: "0x75807250",
+  eurcCredit: "0x54679ce3",
+  creditOf: "0x54679ce3",
   withdrawOwed: "0x39a72c5c",
 } as const;
 
@@ -41,7 +42,7 @@ export async function readCreditOf(
   user: string,
   rpcUrl: string,
 ): Promise<string> {
-  const data = SELECTORS.creditOf + padAddress(user);
+  const data = SELECTORS.eurcCredit + padAddress(user);
   const res = await fetch(rpcUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -53,7 +54,7 @@ export async function readCreditOf(
     }),
   });
   const json = await res.json();
-  if (json.error) throw new Error(json.error.message ?? "creditOf failed");
+  if (json.error) throw new Error(json.error.message ?? "eurcCredit failed");
   const wei = BigInt(json.result || "0x0");
   const whole = wei / BigInt(10 ** 18);
   const frac = (wei % BigInt(10 ** 18)).toString().padStart(18, "0").slice(0, 4);
