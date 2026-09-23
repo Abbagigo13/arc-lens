@@ -158,12 +158,27 @@ export function useWallet() {
     });
   };
 
-  const wallets: CustomWalletOption[] = providers.map((p) => ({
+  // Map EIP-6963 detected providers or fallback to window.ethereum
+  const eip6963Wallets: CustomWalletOption[] = providers.map((p) => ({
     id: p.info.uuid,
     name: p.info.name,
     icon: p.info.icon,
     provider: p.provider,
   }));
+
+  const fallbackWallet: CustomWalletOption[] =
+    typeof window !== "undefined" && window.ethereum
+      ? [
+          {
+            id: "browser-injected",
+            name: "Browser Wallet",
+            icon: "",
+            provider: window.ethereum,
+          },
+        ]
+      : [];
+
+  const wallets = eip6963Wallets.length > 0 ? eip6963Wallets : fallbackWallet;
 
   const isConnected = Boolean(account);
   const address = account;
