@@ -105,6 +105,7 @@ export default function AiPanel() {
 
       switch (intent.type) {
         case "SWAP": {
+          // swap() is payable, takes NO args — send USDC as value
           await sendContractTx(
             HUB_ADDRESS,
             SELECTORS.swap,
@@ -114,11 +115,9 @@ export default function AiPanel() {
         }
 
         case "REDEEM": {
-          await sendContractTx(
-            HUB_ADDRESS,
-            SELECTORS.redeem,
-            "0x" + amountWei.toString(16)
-          );
+          // redeem(uint256) — amount as calldata, value = 0
+          const data = SELECTORS.redeem + padUint(amountWei);
+          await sendContractTx(HUB_ADDRESS, data, "0x0");
           break;
         }
 
@@ -129,6 +128,7 @@ export default function AiPanel() {
           ) {
             throw new Error("Invalid recipient address");
           }
+          // Native USDC transfer — no calldata, value = amount
           await sendContractTx(
             intent.recipient as `0x${string}`,
             "0x",
