@@ -10,7 +10,7 @@ const MAX_FREE_MESSAGES = 3;
 async function checkOnChainUnlock(address: string): Promise<boolean> {
   try {
     const cleanAddress = address.replace("0x", "").padStart(64, "0");
-    const data = `${SELECTORS.unlock}${cleanAddress}`;
+    const data = `${SELECTORS.unlocked}${cleanAddress}`;
 
     const rpcUrl =
       process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
