@@ -10,15 +10,16 @@ export const RECURRING_BUY_ADDRESS =
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7" as const;
 
 export const SELECTORS = {
-  unlock: "0xa87131b0",
-  swap: "0x8119c065",
-  redeem: "0x0b006a75",
-  createPlan: "0xe95fc90f",
+  unlock: "0xa69df4b5",       // unlock() — write
+  unlocked: "0xd1846d0c",     // unlocked(address) — view
+  swap: "0x8119c065",         // swap() — payable
+  redeem: "0x0b006a75",       // redeem(uint256)
+  createPlan: "0xe95fc90f",   // createPlan(address,uint256,uint256) — payable
   deposit: "0xb6b55f25",
-  pull: "0x4d0392a8",
-  cancel: "0x40e58ee5",
-  eurcCredit: "0x54679ce3",
-  creditOf: "0x54679ce3",
+  pull: "0x4d0392a8",         // pull(uint256)
+  cancel: "0x40e58ee5",       // cancel(uint256)
+  eurcCredit: "0x54679ce3",   // eurcCredit(address) — view
+  creditOf: "0x54679ce3",     // alias for older callers
   withdrawOwed: "0x39a72c5c",
 } as const;
 
