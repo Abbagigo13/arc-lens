@@ -25,10 +25,17 @@ import {
   padUint,
 } from "@/lib/contracts";
 
+type Intent = {
+  type: "SWAP" | "REDEEM" | "SEND" | "RECURRING";
+  amount?: string | number;
+  recipient?: string;
+  intervalSeconds?: number;
+};
+
 type Message = {
   role: "user" | "assistant";
   content: string;
-  intent?: any;
+  intent?: Intent;
 };
 
 const PROMPT_CHIPS = [
@@ -38,7 +45,7 @@ const PROMPT_CHIPS = [
 ];
 
 export default function AiPanel() {
-  const { state, updateUser } = useDashboard();
+  const { state, updateUser, addTx } = useDashboard();
   const { isConnected, onArc, address, connect, sendContractTx } = useWallet();
 
   const [messages, setMessages] = useState<Message[]>([
@@ -88,7 +95,7 @@ export default function AiPanel() {
     }
   };
 
-  const executeIntent = async (intent: any, msgIdx: number) => {
+  const executeIntent = async (intent: Intent, msgIdx: number) => {
     if (!isConnected) {
       connect();
       return;
@@ -106,18 +113,20 @@ export default function AiPanel() {
       switch (intent.type) {
         case "SWAP": {
           // swap() is payable, takes NO args — send USDC as value
-          await sendContractTx(
+          const hash = await sendContractTx(
             HUB_ADDRESS,
             SELECTORS.swap,
             "0x" + amountWei.toString(16)
           );
+          addTx({ hash, type: "AI: Swap USDC→EURC" });
           break;
         }
 
         case "REDEEM": {
           // redeem(uint256) — amount as calldata, value = 0
           const data = SELECTORS.redeem + padUint(amountWei);
-          await sendContractTx(HUB_ADDRESS, data, "0x0");
+          const hash = await sendContractTx(HUB_ADDRESS, data, "0x0");
+          addTx({ hash, type: "AI: Redeem EURC→USDC" });
           break;
         }
 
@@ -129,11 +138,12 @@ export default function AiPanel() {
             throw new Error("Invalid recipient address");
           }
           // Native USDC transfer — no calldata, value = amount
-          await sendContractTx(
+          const hash = await sendContractTx(
             intent.recipient as `0x${string}`,
             "0x",
             "0x" + amountWei.toString(16)
           );
+          addTx({ hash, type: "AI: Send USDC" });
           break;
         }
 
@@ -151,11 +161,12 @@ export default function AiPanel() {
             padUint(amountWei) +
             padUint(interval);
 
-          await sendContractTx(
+          const hash = await sendContractTx(
             HUB_ADDRESS,
             data,
             "0x" + amountWei.toString(16)
           );
+          addTx({ hash, type: "AI: Create recurring plan" });
           break;
         }
 
@@ -219,10 +230,15 @@ export default function AiPanel() {
       if (data.isUnlocked) {
         updateUser({ isUnlocked: true });
         setIsPaywallLocked(false);
-      } else if (typeof data.remainingFree === "number") {
-        setFreeLeft(data.remainingFree);
-        if (data.remainingFree === 0) {
-          setIsPaywallLocked(true);
+      } else {
+        // Correct any stale optimistic "isUnlocked" flag set by handleUnlockAI
+        // in case that unlock tx never actually confirmed on-chain.
+        updateUser({ isUnlocked: false });
+        if (typeof data.remainingFree === "number") {
+          setFreeLeft(data.remainingFree);
+          if (data.remainingFree === 0) {
+            setIsPaywallLocked(true);
+          }
         }
       }
 
@@ -232,7 +248,7 @@ export default function AiPanel() {
           { role: "assistant", content: data.reply, intent: data.intent },
         ]);
       }
-    } catch (err) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -245,7 +261,7 @@ export default function AiPanel() {
     }
   };
 
-  const renderActionCard = (intent: any, msgIdx: number) => {
+  const renderActionCard = (intent: Intent, msgIdx: number) => {
     const status = executedStatus[msgIdx];
     const isExecuting = executingIdx === msgIdx;
 

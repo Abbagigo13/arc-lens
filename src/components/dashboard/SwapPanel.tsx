@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { ArrowDownUp, RefreshCw, Wallet, ExternalLink } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
+import { useDashboard } from "@/context/DashboardContext";
 import {
   MINI_SWAP_ADDRESS,
   SELECTORS,
@@ -14,6 +15,7 @@ import { DEFAULT_ARC } from "@/lib/arc";
 
 export default function SwapPanel() {
   const { isConnected, onArc, address, connect, sendContractTx } = useWallet();
+  const { addTx } = useDashboard();
 
   const [direction, setDirection] = useState<"USDC_TO_EURC" | "EURC_TO_USDC">(
     "USDC_TO_EURC"
@@ -38,9 +40,29 @@ export default function SwapPanel() {
   };
 
   useEffect(() => {
-    fetchBalance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
+    let cancelled = false;
+
+    const refreshBalance = async () => {
+      if (!address) return;
+
+      try {
+        const bal = await readCreditOf(address, rpcUrl);
+        if (!cancelled) {
+          setBalance(bal);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to read credit:", err);
+        }
+      }
+    };
+
+    void refreshBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [address, rpcUrl]);
 
   const handleSwap = async () => {
     setError(null);
@@ -78,7 +100,19 @@ export default function SwapPanel() {
 
       const hash = await sendContractTx(MINI_SWAP_ADDRESS, data, value);
       setTxHash(hash);
-      setTimeout(fetchBalance, 3000);
+      addTx({
+        hash,
+        type: direction === "USDC_TO_EURC" ? "Swap USDC→EURC" : "Redeem EURC→USDC",
+      });
+
+      // Poll for the updated balance instead of guessing a single delay —
+      // confirmation time isn't predictable, so check every 3s for ~18s.
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        fetchBalance();
+        if (attempts >= 6) clearInterval(poll);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Swap failed");
     } finally {

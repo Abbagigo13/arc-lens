@@ -18,3 +18,31 @@ export const ARC_TESTNET = {
 
 /** Testing = Mainnet */
 export const DEFAULT_ARC = ARC_MAINNET;
+
+/**
+ * JSON-RPC helper with automatic failover. Tries each URL in `urls` in
+ * order and only throws once every endpoint has failed — so a single
+ * bad RPC node doesn't take the whole app down.
+ */
+export async function rpcRequest(
+  method: string,
+  params: unknown[] = [],
+  urls: readonly string[] = DEFAULT_ARC.rpcUrls,
+): Promise<string> {
+  let lastError: unknown;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message ?? "RPC error");
+      return json.result as string;
+    } catch (err) {
+      lastError = err; // try the next URL in the list
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("All RPC endpoints failed");
+}

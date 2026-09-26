@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import { Blocks, Fuel, Activity, Link2 } from "lucide-react";
 import StatCard from "./StatCard";
-import { DEFAULT_ARC } from "@/lib/arc";
-
-const RPC = DEFAULT_ARC.rpcUrls[0];
+import { DEFAULT_ARC, rpcRequest } from "@/lib/arc";
 
 type Stats = {
   block: string;
@@ -25,23 +23,12 @@ export default function NetworkStats() {
   useEffect(() => {
     let cancelled = false;
 
-    async function rpc(method: string, params: unknown[] = []) {
-      const res = await fetch(RPC, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message ?? "RPC error");
-      return json.result as string;
-    }
-
     async function load() {
       try {
         const [blockHex, gasHex, chainHex] = await Promise.all([
-          rpc("eth_blockNumber"),
-          rpc("eth_gasPrice"),
-          rpc("eth_chainId"),
+          rpcRequest("eth_blockNumber"),
+          rpcRequest("eth_gasPrice"),
+          rpcRequest("eth_chainId"),
         ]);
         if (cancelled) return;
         const block = parseInt(blockHex, 16).toLocaleString();

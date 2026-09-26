@@ -117,7 +117,7 @@ Use REDEEM when the user wants to convert their synthetic EURC credit back to US
     if (jsonMatch) {
       try {
         intent = JSON.parse(jsonMatch[0]);
-      } catch (e) {
+      } catch {
         // ignore parse errors
       }
     }

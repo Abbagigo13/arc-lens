@@ -13,7 +13,7 @@ export const SELECTORS = {
   unlock: "0xa69df4b5",       // unlock() — write
   unlocked: "0xd1846d0c",     // unlocked(address) — view
   swap: "0x8119c065",         // swap() — payable
-  redeem: "0x0b006a75",       // redeem(uint256)
+  redeem: "0xdb006a75",       // redeem(uint256) — was 0x0b006a75 (wrong selector, fixed)
   createPlan: "0xe95fc90f",   // createPlan(address,uint256,uint256) — payable
   deposit: "0xb6b55f25",
   pull: "0x4d0392a8",         // pull(uint256)

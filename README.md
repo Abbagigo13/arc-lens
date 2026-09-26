@@ -1,5 +1,3 @@
-<div align="center">
-
 # 🔭 ArcLens
 
 **A live network dashboard + AI guide for Arc L1 — built on native USDC.**
@@ -29,7 +27,7 @@ It combines real-time network data with a Qwen-powered AI guide, unlocked throug
 ## ✨ Features
 
 | Feature | Description |
-|---|---|
+| --- | --- |
 | 🌐 **Live Network Pulse** | Real-time block number, gas (USDC), chain ID, activity |
 | 🤖 **AI Guide (Qwen)** | Plain-English explanations with live dashboard context |
 | 🔓 **USDC Unlock Paywall** | Pay 0.01 USDC via `unlock()`; status read on-chain |
@@ -44,7 +42,7 @@ It combines real-time network data with a Qwen-powered AI guide, unlocked throug
 ## 🖼️ Screenshots
 
 | Dashboard | AI Chat | Send / Swap |
-|---|---|---|
+| --- | --- | --- |
 | ![dashboard](./docs/dashboard.png) | ![chat](./docs/chat.png) | ![send](./docs/send.png) |
 
 > 📹 **Demo video:** [Watch the 3-minute walkthrough](https://youtu.be/xxxx)
@@ -63,7 +61,8 @@ flowchart LR
     HUB -->|USDC| ARC[Arc L1]
 ```
 
-**Stack**
+### Stack
+
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind, Framer Motion, React Three Fiber
 - **Wallet:** wagmi / viem, multi-wallet connect + Arc chain switch
 - **AI:** Qwen (`qwen-plus`) via DashScope, server-side only
@@ -75,7 +74,7 @@ flowchart LR
 ## 🔗 Contract
 
 | | |
-|---|---|
+| --- | --- |
 | Network | Arc Mainnet |
 | Address | `0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7` |
 | Explorer | [View verified source](https://explorer.arc.io/address/0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7) |
@@ -87,12 +86,14 @@ flowchart LR
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - npm / pnpm
 - A wallet (MetaMask, Rabby, Coinbase Wallet, or WalletConnect)
-- A DashScope API key → https://dashscope.console.aliyun.com/
+- A DashScope API key → <https://dashscope.console.aliyun.com/>
 
 ### Install
+
 ```bash
 git clone https://github.com/Abbagigo13/arc-lens.git
 cd arc-lens
@@ -100,9 +101,11 @@ npm install
 ```
 
 ### Configure
+
 ```bash
 cp .env.example .env.local
 ```
+
 ```env
 DASHSCOPE_API_KEY=your_dashscope_api_key
 NEXT_PUBLIC_ARC_HUB_ADDRESS=0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7
@@ -110,12 +113,14 @@ NEXT_PUBLIC_ARC_CHAIN_ID=your_arc_chain_id
 ```
 
 ### Run
+
 ```bash
 npm run dev
 # → http://localhost:3000
 ```
 
 ### Build
+
 ```bash
 npm run build && npm start
 ```
@@ -125,7 +130,7 @@ npm run build && npm start
 ## 📜 Scripts
 
 | Script | Purpose |
-|---|---|
+| --- | --- |
 | `npm run dev` | Local dev server |
 | `npm run build` | Production build |
 | `npm run lint` | ESLint |
@@ -184,9 +189,9 @@ PRs welcome. See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and
 
 ## 🔗 Links
 
-- **Arc:** https://arc.network
-- **Docs:** https://docs.arc.io
-- **Studio:** https://studio.arc.io
-- **Live Hub:** https://arc-lens-alpha.vercel.app/
+- **Arc:** <https://arc.network>
+- **Docs:** <https://docs.arc.io>
+- **Studio:** <https://studio.arc.io>
+- **Live Hub:** <https://arc-lens-alpha.vercel.app/>
 
-<div align="center"><sub>Built on Arc · Powered by native USDC · AI by Qwen</sub></div>
+Built on Arc · Powered by native USDC · AI by Qwen

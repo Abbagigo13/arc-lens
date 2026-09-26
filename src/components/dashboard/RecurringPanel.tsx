@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Repeat, ExternalLink } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
+import { useDashboard } from "@/context/DashboardContext";
 import {
   RECURRING_BUY_ADDRESS,
   SELECTORS,
@@ -15,10 +16,12 @@ import { DEFAULT_ARC } from "@/lib/arc";
 
 export default function RecurringPanel() {
   const { isConnected, onArc, connect, sendContractTx } = useWallet();
+  const { addTx } = useDashboard();
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("0.01");
   const [intervalSec, setIntervalSec] = useState("60");
   const [planId, setPlanId] = useState("0");
+  const [topUpAmount, setTopUpAmount] = useState("0.01");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +61,7 @@ export default function RecurringPanel() {
         "0x" + amountWei.toString(16),
       );
       setTxHash(hash);
+      addTx({ hash, type: "Create plan" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
     } finally {
@@ -85,6 +89,7 @@ export default function RecurringPanel() {
       const data = SELECTORS.pull + padUint(id);
       const hash = await sendContractTx(RECURRING_BUY_ADDRESS, data, "0x0");
       setTxHash(hash);
+      addTx({ hash, type: "Pull due" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Pull failed");
     } finally {
@@ -112,8 +117,42 @@ export default function RecurringPanel() {
       const data = SELECTORS.cancel + padUint(id);
       const hash = await sendContractTx(RECURRING_BUY_ADDRESS, data, "0x0");
       setTxHash(hash);
+      addTx({ hash, type: "Cancel plan" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cancel failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeposit() {
+    setError(null);
+    setTxHash(null);
+
+    if (!isConnected) {
+      connect();
+      return;
+    }
+
+    if (!onArc) {
+      setError("Switch to Arc Network (chain 5042) first.");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const id = BigInt(planId || "0");
+      const amountWei = BigInt(toWeiHex(topUpAmount, 18));
+      const data = SELECTORS.deposit + padUint(id);
+      const hash = await sendContractTx(
+        RECURRING_BUY_ADDRESS,
+        data,
+        "0x" + amountWei.toString(16),
+      );
+      setTxHash(hash);
+      addTx({ hash, type: "Plan top-up" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Top-up failed");
     } finally {
       setBusy(false);
     }
@@ -215,6 +254,27 @@ export default function RecurringPanel() {
             className="cursor-pointer rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-xs font-medium text-danger hover:bg-danger/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? "Processing…" : "Cancel Plan"}
+          </button>
+        </div>
+
+        <label className="mb-1.5 mt-3 block text-xs font-medium text-slate-300">
+          Top up plan balance
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={topUpAmount}
+            onChange={(e) => setTopUpAmount(e.target.value)}
+            placeholder="Amount to add"
+            inputMode="decimal"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm font-mono text-foreground outline-none focus:border-accent"
+          />
+          <button
+            type="button"
+            onClick={onDeposit}
+            disabled={busy || (isConnected && (planId === "" || !topUpAmount.trim()))}
+            className="cursor-pointer whitespace-nowrap rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-medium text-accent hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {busy ? "Processing…" : "Top Up"}
           </button>
         </div>
       </div>

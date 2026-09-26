@@ -33,10 +33,10 @@ export default function VolumeChart() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Network activity</h2>
-            <p className="text-xs text-slate-400">Live block indexing & throughput</p>
+            <p className="text-xs text-slate-400">Illustrative sample — not live data</p>
           </div>
-          <span className="text-xs font-semibold text-success bg-success/10 px-2.5 py-0.5 rounded-full border border-success/20">
-            ↑ Active
+          <span className="text-xs font-semibold text-muted bg-muted/10 px-2.5 py-0.5 rounded-full border border-card-border">
+            Sample
           </span>
         </div>
         <div className="w-full overflow-hidden">
@@ -75,8 +75,8 @@ export default function VolumeChart() {
           </svg>
         </div>
         <div className="mt-2 flex justify-between text-[11px] font-medium text-slate-400">
-          <span>−12 blocks</span>
-          <span>Latest block</span>
+          <span>Sample range</span>
+          <span>Sample data</span>
         </div>
       </motion.div>
 
@@ -87,7 +87,7 @@ export default function VolumeChart() {
         className="card-surface rounded-2xl p-5 lg:col-span-2"
       >
         <h2 className="text-sm font-semibold text-foreground">App usage mix</h2>
-        <p className="mb-4 text-xs text-slate-400">Transaction category breakdown</p>
+        <p className="mb-4 text-xs text-slate-400">Illustrative breakdown (sample data)</p>
         <ul className="space-y-3.5">
           {BARS.map((b) => (
             <li key={b.label}>

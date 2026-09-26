@@ -1,7 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { DEFAULT_ARC } from "@/lib/arc";
+import { DEFAULT_ARC, rpcRequest } from "@/lib/arc";
+import { useWalletContext } from "@/context/WalletContext";
 
 // Action Intent type definitions for AI automation hooks
 export type ActionIntent =
@@ -61,24 +62,19 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  // Poll RPC for live metrics
+  // Poll RPC for live metrics (now with failover across DEFAULT_ARC.rpcUrls)
   useEffect(() => {
     let cancelled = false;
     async function fetchStats() {
       try {
-        const res = await fetch(DEFAULT_ARC.rpcUrls[0], {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([
-            { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] },
-            { jsonrpc: "2.0", id: 2, method: "eth_gasPrice", params: [] },
-          ]),
-        });
-        const [blockRes, gasRes] = await res.json();
+        const [blockHex, gasHex] = await Promise.all([
+          rpcRequest("eth_blockNumber"),
+          rpcRequest("eth_gasPrice"),
+        ]);
         if (cancelled) return;
 
-        const block = parseInt(blockRes.result, 16).toLocaleString();
-        const gwei = Number(BigInt(gasRes.result)) / 1e9;
+        const block = parseInt(blockHex, 16).toLocaleString();
+        const gwei = Number(BigInt(gasHex)) / 1e9;
 
         setState((prev) => ({
           ...prev,
@@ -107,8 +103,51 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Keep the wallet's native USDC balance in sync — previously this never
+  // updated at all, so the "USDC Balance" stat and the AI's snapshot always
+  // saw a hardcoded "0".
+  const { address } = useWalletContext();
+
+  useEffect(() => {
+    if (!address) {
+      return;
+    }
+    let cancelled = false;
+
+    async function fetchBalance() {
+      try {
+        const result = await rpcRequest("eth_getBalance", [address, "latest"]);
+        if (cancelled) return;
+        const wei = BigInt(result || "0x0");
+        const whole = wei / BigInt(10 ** 18);
+        const frac = (wei % BigInt(10 ** 18)).toString().padStart(18, "0").slice(0, 4);
+        updateUser({ usdcBalance: `${whole}.${frac}`, address });
+      } catch {
+        // leave the last known balance on a transient RPC error
+      }
+    }
+
+    fetchBalance();
+    const id = setInterval(fetchBalance, 12_000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [address]);
+
+  const dashboardState: DashboardState = address
+    ? state
+    : {
+        ...state,
+        user: {
+          ...state.user,
+          address: null,
+          usdcBalance: "0",
+        },
+      };
+
   return (
-    <DashboardContext.Provider value={{ state, updateUser, addTx }}>
+    <DashboardContext.Provider value={{ state: dashboardState, updateUser, addTx }}>
       {children}
     </DashboardContext.Provider>
   );

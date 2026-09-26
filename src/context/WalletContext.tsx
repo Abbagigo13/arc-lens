@@ -2,6 +2,15 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { ARC_MAINNET } from "@/lib/arc";
+import { toWeiHex } from "@/lib/contracts";
+
+// Minimal EIP-1193 provider shape — covers what this app actually calls
+// (request/on/removeListener) without resorting to `any`.
+export interface Eip1193Provider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on?: <Args extends unknown[]>(event: string, handler: (...args: Args) => void) => void;
+  removeListener?: <Args extends unknown[]>(event: string, handler: (...args: Args) => void) => void;
+}
 
 export interface EIP6963ProviderDetail {
   info: {
@@ -10,19 +19,19 @@ export interface EIP6963ProviderDetail {
     icon: string;
     rdns: string;
   };
-  provider: any;
+  provider: Eip1193Provider;
 }
 
 export interface CustomWalletOption {
   id: string;
   name: string;
   icon?: string;
-  provider: any;
+  provider: Eip1193Provider;
 }
 
 declare global {
   interface Window {
-    ethereum?: any;
+    ethereum?: Eip1193Provider;
   }
 }
 
@@ -57,7 +66,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [activeProvider, setActiveProvider] = useState<any>(null);
+  const [activeProvider, setActiveProvider] = useState<Eip1193Provider | null>(null);
 
   const arcChainHex =
     "chainId" in ARC_MAINNET && typeof ARC_MAINNET.chainId === "string"
@@ -75,7 +84,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
 
     window.addEventListener(
-      "eip6963:announceProvider" as any,
+      "eip6963:announceProvider",
       handleAnnounce as EventListener
     );
 
@@ -84,23 +93,24 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== "undefined" && window.ethereum) {
       window.ethereum
         .request({ method: "eth_accounts" })
-        .then((accounts: string[]) => {
+        .then((result) => {
+          const accounts = result as string[];
           if (accounts && accounts.length > 0) {
             setAccount(accounts[0]);
-            setActiveProvider(window.ethereum);
+            setActiveProvider(window.ethereum ?? null);
           }
         })
         .catch(console.error);
 
       window.ethereum
         .request({ method: "eth_chainId" })
-        .then((cid: string) => setChainId(cid))
+        .then((result) => setChainId(result as string))
         .catch(console.error);
     }
 
     return () => {
       window.removeEventListener(
-        "eip6963:announceProvider" as any,
+        "eip6963:announceProvider",
         handleAnnounce as EventListener
       );
     };
@@ -137,18 +147,18 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setConnecting(true);
     setError(null);
     try {
-      const accounts = await detail.provider.request({
+      const accounts = (await detail.provider.request({
         method: "eth_requestAccounts",
-      });
+      })) as string[];
       if (accounts && accounts.length > 0) {
         setAccount(accounts[0]);
         setActiveProvider(detail.provider);
-        const cid = await detail.provider.request({ method: "eth_chainId" });
+        const cid = (await detail.provider.request({ method: "eth_chainId" })) as string;
         setChainId(cid);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Wallet connection error:", err);
-      setError(err?.message || "Failed to connect wallet");
+      setError(err instanceof Error ? err.message : "Failed to connect wallet");
     } finally {
       setConnecting(false);
       setPickerOpen(false);
@@ -178,8 +188,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const provider = activeProvider || (typeof window !== "undefined" ? window.ethereum : null);
     if (!provider || !account) throw new Error("Wallet not connected");
 
-    const weiValue = "0x" + BigInt(Math.floor(parseFloat(amountEth) * 1e18)).toString(16);
-    return await provider.request({
+    // Exact decimal-string math — avoids float rounding error that
+    // Math.floor(parseFloat(amountEth) * 1e18) introduced for real amounts.
+    const weiValue = toWeiHex(amountEth, 18);
+    const hash = await provider.request({
       method: "eth_sendTransaction",
       params: [
         {
@@ -189,13 +201,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         },
       ],
     });
+    return hash as string;
   };
 
   const sendContractTx = async (to: string, data: string, valueWei: string = "0x0") => {
     const provider = activeProvider || (typeof window !== "undefined" ? window.ethereum : null);
     if (!provider || !account) throw new Error("Wallet not connected");
 
-    return await provider.request({
+    const hash = await provider.request({
       method: "eth_sendTransaction",
       params: [
         {
@@ -206,6 +219,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         },
       ],
     });
+    return hash as string;
   };
 
   const eip6963Wallets: CustomWalletOption[] = providers.map((p) => ({

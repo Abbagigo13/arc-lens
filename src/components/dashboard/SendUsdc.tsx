@@ -4,10 +4,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, ExternalLink } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
+import { useDashboard } from "@/context/DashboardContext";
 import { DEFAULT_ARC } from "@/lib/arc";
 
 export default function SendUsdc() {
   const { isConnected, onArc, sendNativeUsdc, connect } = useWallet();
+  const { addTx } = useDashboard();
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,10 +31,16 @@ export default function SendUsdc() {
       return;
     }
 
+    if (!/^0x[a-fA-F0-9]{40}$/.test(to.trim())) {
+      setError("Invalid recipient address format.");
+      return;
+    }
+
     setBusy(true);
     try {
       const hash = await sendNativeUsdc(to, amount);
       setTxHash(hash);
+      addTx({ hash, type: "Send USDC" });
       setAmount("");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Send failed";
