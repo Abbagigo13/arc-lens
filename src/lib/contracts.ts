@@ -1,4 +1,6 @@
 /** Arc Mainnet — ArcLensHub Contract */
+import { rpcRequest, DEFAULT_ARC } from "@/lib/arc";
+
 export const HUB_ADDRESS =
   (process.env.NEXT_PUBLIC_HUB_ADDRESS as `0x${string}`) ||
   "0xFb430BbC236b2FAcDB11c81d79eE551DFad14AF7";
@@ -41,22 +43,15 @@ export function padUint(n: bigint): string {
 
 export async function readCreditOf(
   user: string,
-  rpcUrl: string,
+  urls: readonly string[] = DEFAULT_ARC.rpcUrls,
 ): Promise<string> {
   const data = SELECTORS.eurcCredit + padAddress(user);
-  const res = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "eth_call",
-      params: [{ to: MINI_SWAP_ADDRESS, data }, "latest"],
-    }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message ?? "eurcCredit failed");
-  const wei = BigInt(json.result || "0x0");
+  const result = await rpcRequest(
+    "eth_call",
+    [{ to: MINI_SWAP_ADDRESS, data }, "latest"],
+    urls,
+  );
+  const wei = BigInt(result || "0x0");
   const whole = wei / BigInt(10 ** 18);
   const frac = (wei % BigInt(10 ** 18)).toString().padStart(18, "0").slice(0, 4);
   return `${whole}.${frac}`;

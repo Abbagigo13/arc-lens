@@ -26,24 +26,31 @@ export default function SwapPanel() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const rpcUrl =
-    process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
+  // Try the env-configured RPC URL first (if set), then fall back to the
+  // built-in defaults — so a misconfigured or slow env var can't silently
+  // break balance reads the way it just did in production.
+  const rpcUrls = process.env.NEXT_PUBLIC_ARC_RPC_URL
+    ? [process.env.NEXT_PUBLIC_ARC_RPC_URL, ...DEFAULT_ARC.rpcUrls]
+    : DEFAULT_ARC.rpcUrls;
 
   // Plain helper — no setState inside it, safe to call from anywhere
   // (the mount/address-change effect below, and the post-swap poll).
-  // Memoized so it's stable across renders (only changes if rpcUrl does),
+  // Memoized so it's stable across renders (only changes if rpcUrls does),
   // which lets it satisfy exhaustive-deps below without refetching on
   // every render.
   const loadCredit = useCallback(
     async (addr: string): Promise<string | null> => {
       try {
-        return await readCreditOf(addr, rpcUrl);
+        return await readCreditOf(addr, rpcUrls);
       } catch (err) {
         console.error("Failed to read credit:", err);
         return null;
       }
     },
-    [rpcUrl],
+    // rpcUrls is a new array each render, so depend on the one input that
+    // actually changes it, not the array reference itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [process.env.NEXT_PUBLIC_ARC_RPC_URL],
   );
 
   useEffect(() => {
