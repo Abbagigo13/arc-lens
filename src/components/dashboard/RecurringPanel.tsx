@@ -12,7 +12,41 @@ import {
   padAddress,
   padUint,
 } from "@/lib/contracts";
-import { DEFAULT_ARC } from "@/lib/arc";
+import { DEFAULT_ARC, rpcRequest } from "@/lib/arc";
+
+// keccak256("PlanCreated(uint256,address,address,uint256,uint256,uint256)")
+const PLAN_CREATED_TOPIC =
+  "0xebe8faacda26f3794e66a5bb47309bc3d2ca1350d36c8d0b71d2cbd2c2722041";
+
+type TxReceipt = {
+  blockNumber?: string;
+  logs?: { address: string; topics: string[]; data: string }[];
+};
+
+// Poll for the tx receipt (it isn't mined instantly) and pull the real
+// planId out of the PlanCreated event log, instead of leaving the user to
+// guess — plan IDs are a global counter, so "0" is only right for the
+// very first plan ever created on this contract.
+async function findCreatedPlanId(hash: string): Promise<string | null> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      const receipt = await rpcRequest<TxReceipt | null>("eth_getTransactionReceipt", [hash]);
+      if (receipt && receipt.logs) {
+        const log = receipt.logs.find(
+          (l) => l.topics && l.topics[0]?.toLowerCase() === PLAN_CREATED_TOPIC,
+        );
+        if (log) {
+          return BigInt(log.topics[1]).toString();
+        }
+        if (receipt.blockNumber) return null; // mined but no matching log — give up
+      }
+    } catch {
+      // ignore and retry
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  return null;
+}
 
 export default function RecurringPanel() {
   const { isConnected, onArc, connect, sendContractTx } = useWallet();
@@ -25,11 +59,14 @@ export default function RecurringPanel() {
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [createdPlanId, setCreatedPlanId] = useState<string | null>(null);
+  const [lookingUpPlanId, setLookingUpPlanId] = useState(false);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setTxHash(null);
+    setCreatedPlanId(null);
 
     if (!isConnected) {
       connect();
@@ -62,6 +99,18 @@ export default function RecurringPanel() {
       );
       setTxHash(hash);
       addTx({ hash, type: "Create plan" });
+      setBusy(false);
+
+      // Look up the real plan ID in the background so Pull/Cancel/Top Up
+      // point at the plan you actually just created, not a guess.
+      setLookingUpPlanId(true);
+      const foundId = await findCreatedPlanId(hash);
+      setLookingUpPlanId(false);
+      if (foundId !== null) {
+        setCreatedPlanId(foundId);
+        setPlanId(foundId);
+      }
+      return;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Create failed");
     } finally {
@@ -227,6 +276,17 @@ export default function RecurringPanel() {
                 ? "Confirm in Wallet…"
                 : "Create Plan"}
         </button>
+
+        {lookingUpPlanId && (
+          <p className="mt-2 text-xs text-slate-400">
+            Confirming on-chain and finding your plan ID…
+          </p>
+        )}
+        {createdPlanId !== null && (
+          <p className="mt-2 text-xs text-success">
+            Plan created — ID <span className="font-mono">{createdPlanId}</span> (auto-filled below).
+          </p>
+        )}
       </form>
 
       <div className="mt-5 border-t border-slate-800 pt-4">

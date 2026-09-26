@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowDownUp, RefreshCw, Wallet, ExternalLink } from "lucide-react";
 import { useWallet } from "@/hooks/useWallet";
 import { useDashboard } from "@/context/DashboardContext";
@@ -29,40 +29,33 @@ export default function SwapPanel() {
   const rpcUrl =
     process.env.NEXT_PUBLIC_ARC_RPC_URL || DEFAULT_ARC.rpcUrls[0];
 
-  const fetchBalance = async () => {
-    if (!address) return;
-    try {
-      const bal = await readCreditOf(address, rpcUrl);
-      setBalance(bal);
-    } catch (err) {
-      console.error("Failed to read credit:", err);
-    }
-  };
+  // Plain helper — no setState inside it, safe to call from anywhere
+  // (the mount/address-change effect below, and the post-swap poll).
+  // Memoized so it's stable across renders (only changes if rpcUrl does),
+  // which lets it satisfy exhaustive-deps below without refetching on
+  // every render.
+  const loadCredit = useCallback(
+    async (addr: string): Promise<string | null> => {
+      try {
+        return await readCreditOf(addr, rpcUrl);
+      } catch (err) {
+        console.error("Failed to read credit:", err);
+        return null;
+      }
+    },
+    [rpcUrl],
+  );
 
   useEffect(() => {
+    if (!address) return;
     let cancelled = false;
-
-    const refreshBalance = async () => {
-      if (!address) return;
-
-      try {
-        const bal = await readCreditOf(address, rpcUrl);
-        if (!cancelled) {
-          setBalance(bal);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error("Failed to read credit:", err);
-        }
-      }
-    };
-
-    void refreshBalance();
-
+    loadCredit(address).then((bal) => {
+      if (!cancelled && bal !== null) setBalance(bal);
+    });
     return () => {
       cancelled = true;
     };
-  }, [address, rpcUrl]);
+  }, [address, loadCredit]);
 
   const handleSwap = async () => {
     setError(null);
@@ -110,7 +103,11 @@ export default function SwapPanel() {
       let attempts = 0;
       const poll = setInterval(() => {
         attempts++;
-        fetchBalance();
+        if (address) {
+          loadCredit(address).then((bal) => {
+            if (bal !== null) setBalance(bal);
+          });
+        }
         if (attempts >= 6) clearInterval(poll);
       }, 3000);
     } catch (err) {

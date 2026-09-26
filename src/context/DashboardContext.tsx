@@ -110,6 +110,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!address) {
+      // Deferred to a microtask (not called synchronously in the effect
+      // body) to match the same pattern as the fetch below and avoid
+      // triggering cascading renders during the effect's own commit.
+      Promise.resolve().then(() => updateUser({ usdcBalance: "0" }));
       return;
     }
     let cancelled = false;
@@ -135,19 +139,8 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     };
   }, [address]);
 
-  const dashboardState: DashboardState = address
-    ? state
-    : {
-        ...state,
-        user: {
-          ...state.user,
-          address: null,
-          usdcBalance: "0",
-        },
-      };
-
   return (
-    <DashboardContext.Provider value={{ state: dashboardState, updateUser, addTx }}>
+    <DashboardContext.Provider value={{ state, updateUser, addTx }}>
       {children}
     </DashboardContext.Provider>
   );

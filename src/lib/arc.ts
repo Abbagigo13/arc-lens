@@ -24,11 +24,11 @@ export const DEFAULT_ARC = ARC_MAINNET;
  * order and only throws once every endpoint has failed — so a single
  * bad RPC node doesn't take the whole app down.
  */
-export async function rpcRequest(
+export async function rpcRequest<T = string>(
   method: string,
   params: unknown[] = [],
   urls: readonly string[] = DEFAULT_ARC.rpcUrls,
-): Promise<string> {
+): Promise<T> {
   let lastError: unknown;
   for (const url of urls) {
     try {
@@ -39,7 +39,7 @@ export async function rpcRequest(
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error.message ?? "RPC error");
-      return json.result as string;
+      return json.result as T;
     } catch (err) {
       lastError = err; // try the next URL in the list
     }
